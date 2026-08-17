@@ -12,14 +12,24 @@ análise em R.
 - `R/analysis_geo_pop_sui.R` — script para RStudio que baixa um dataset do GEO (`GEOquery`),
   roda controle de qualidade (PCA), expressão diferencial (`limma`), volcano plot, heatmap e
   enriquecimento funcional GO/KEGG (`clusterProfiler`).
+- `R/analysis_GSE149072_36h_orthologs.R` — script específico para o **GSE149072**
+  ("Gene expression profiling of tissue and hMSC xenografts in a rat postpartum urinary
+  injury model", Sadeghi et al. 2020). Isola as amostras de rato (Rattus norvegicus),
+  filtra o grupo lesão sem tratamento no tempo de 36h, roda expressão diferencial (`limma`)
+  contra o grupo controle e converte os DEGs de rato para ortólogos humanos
+  (`orthogene`/`biomaRt`).
 
 ## Como usar
 
-1. Abra `R/analysis_geo_pop_sui.R` no RStudio.
+1. Abra o script desejado no RStudio.
 2. Rode a Seção 1 para instalar os pacotes necessários (Bioconductor + CRAN).
-3. Ajuste `GSE_ID` na Seção 3 para o accession desejado (ex.: `GSE53868`, `GSE12852`,
-   `GSE28660`) — a lista completa está em `data/POP_SUI_GEO_datasets.xlsx`.
-4. Execute o script por blocos. Os resultados (CSV, gráficos e Excel final) são salvos em
+3. Em `analysis_geo_pop_sui.R`, ajuste `GSE_ID` na Seção 3 para o accession desejado (ex.:
+   `GSE53868`, `GSE12852`, `GSE28660`) — a lista completa está em
+   `data/POP_SUI_GEO_datasets.xlsx`.
+4. Em `analysis_GSE149072_36h_orthologs.R`, confira a saída impressa dos metadados reais
+   (Seção 3) e ajuste os filtros de grupo/tempo (Seção 4) se os rótulos exatos do GEO
+   diferirem dos padrões usados por default.
+5. Execute o script por blocos. Os resultados (CSV, gráficos e Excel final) são salvos em
    `results/`.
 
 ## Principal achado da busca
