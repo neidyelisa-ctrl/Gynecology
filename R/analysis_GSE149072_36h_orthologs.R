@@ -3,30 +3,20 @@
 # rat postpartum urinary injury model (Sadeghi et al. 2020, Tissue Eng Part A,
 # DOI 10.1089/ten.tea.2020.0033)
 #
-# Objetivo deste script:
-#   1) Baixar o GSE149072 do GEO.
-#   2) Isolar as amostras de tecido de RATO (Rattus norvegicus) - o xenograft
-#      de hMSC (Homo sapiens) fica em outra plataforma/subset do mesmo Series
-#      e nao entra nesta comparacao.
-#   3) Filtrar as amostras do tempo de 36h, grupo "lesao sem tratamento"
-#      (vaginal distension / injury, SEM injecao de hMSC).
-#   4) Comparar esse grupo contra o grupo controle/normal para achar os genes
-#      diferencialmente expressos (DEGs).
-#   5) Converter os DEGs de rato para ortologos humanos (biomaRt + orthogene).
-#   6) Exportar tudo para Excel.
+# ESTE SCRIPT REPRODUZ A ANALISE REAL RODADA SOBRE data/GSE149072_rawCounts.csv
+# (contagens brutas de RNA-seq baixadas pelo usuario da pagina do GSE149072
+# no GEO), cujo resultado esta em results/GSE149072_36h_DEGs_ortologos_humanos.xlsx.
 #
-# IMPORTANTE - LEIA ANTES DE RODAR:
-#   Este script NAO foi executado neste momento porque o ambiente onde ele
-#   foi gerado bloqueia acesso a ncbi.nlm.nih.gov. Rode-o no seu RStudio,
-#   com internet liberada.
+# Comparacao: amostras de uretra de rata em 36h pos-lesao por distensao
+# vaginal, SEM tratamento com hMSC (Rat_Urethra_Untreated_36hr, n=3) vs. COM
+# tratamento com hMSC (Rat_Urethra_Treated_36hr, n=3). Esta e a unica
+# comparacao possivel no arquivo de contagens brutas para o tempo de 36h -
+# nao ha amostras de uretra normal/nao-lesionada (controle saudavel) neste
+# arquivo, apenas lesao-sem-tratamento, lesao-com-tratamento e as celulas
+# hMSC humanas isoladas (colunas "MSC_*").
 #
-#   Os nomes exatos das colunas/valores de metadados (grupo, tempo,
-#   tratamento) do GSE149072 variam conforme como os autores rotularam as
-#   amostras no GEO. A Secao 2 IMPRIME esses metadados brutos (pData) antes
-#   de qualquer filtro - confira a saida no console e ajuste os padroes de
-#   regex da Secao 3 (marcados com "AJUSTAR AQUI") para bater exatamente com
-#   os rotulos reais, caso os padroes automaticos abaixo nao encontrem as
-#   amostras certas ou encontrem amostras demais/de menos.
+# log2FoldChange positivo = maior expressao no grupo Treated (efeito do hMSC)
+# log2FoldChange negativo = maior expressao no grupo Untreated (doente)
 # =============================================================================
 
 ## -----------------------------------------------------------------------
@@ -34,229 +24,98 @@
 ## -----------------------------------------------------------------------
 
 if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
+if (!requireNamespace("DESeq2", quietly = TRUE)) BiocManager::install("DESeq2", update = FALSE, ask = FALSE)
+if (!requireNamespace("homologene", quietly = TRUE)) install.packages("homologene")
+if (!requireNamespace("openxlsx", quietly = TRUE)) install.packages("openxlsx")
 
-required_bioc <- c("GEOquery", "limma", "Biobase", "biomaRt")
-missing_bioc <- required_bioc[!sapply(required_bioc, requireNamespace, quietly = TRUE)]
-if (length(missing_bioc) > 0) BiocManager::install(missing_bioc, update = FALSE, ask = FALSE)
-
-if (!requireNamespace("orthogene", quietly = TRUE)) {
-  # orthogene facilita a conversao rato -> humano; se a instalacao falhar,
-  # o script cai automaticamente no metodo biomaRt (Secao 6B).
-  try(BiocManager::install("orthogene", update = FALSE, ask = FALSE), silent = TRUE)
-}
-
-required_cran <- c("dplyr", "tibble", "openxlsx", "stringr")
-missing_cran <- required_cran[!sapply(required_cran, requireNamespace, quietly = TRUE)]
-if (length(missing_cran) > 0) install.packages(missing_cran)
-
-library(GEOquery)
-library(limma)
-library(Biobase)
-library(dplyr)
-library(tibble)
-library(stringr)
+library(DESeq2)
+library(homologene)
 library(openxlsx)
 
-dir.create("data/geo_cache", showWarnings = FALSE, recursive = TRUE)
 dir.create("results", showWarnings = FALSE, recursive = TRUE)
 
 ## -----------------------------------------------------------------------
-## 2. Download do GSE149072 e identificacao do subset de rato
+## 2. Ler as contagens brutas
 ## -----------------------------------------------------------------------
 
-GSE_ID <- "GSE149072"
+counts_file <- "data/GSE149072_rawCounts.csv"
+df <- read.csv(counts_file, row.names = 1, check.names = FALSE)
+df <- round(as.matrix(df)); mode(df) <- "integer"
 
-gse_list <- getGEO(GSE_ID, GSEMatrix = TRUE, AnnotGPL = TRUE,
-                    destdir = "data/geo_cache")
-
-cat("Numero de subsets/plataformas encontrados:", length(gse_list), "\n")
-for (i in seq_along(gse_list)) {
-  cat("\n--- Subset", i, "| Plataforma:", annotation(gse_list[[i]]), "---\n")
-  print(table(pData(gse_list[[i]])$organism_ch1))
-}
-
-## Seleciona o(s) subset(s) cujas amostras sao de Rattus norvegicus
-is_rat <- sapply(gse_list, function(x) {
-  any(grepl("Rattus norvegicus", pData(x)$organism_ch1, ignore.case = TRUE))
-})
-stopifnot("Nenhum subset de Rattus norvegicus encontrado - confira gse_list manualmente" = any(is_rat))
-
-eset_rat <- gse_list[[which(is_rat)[1]]]
-cat("\nUsando subset de rato com", ncol(eset_rat), "amostras e",
-    nrow(eset_rat), "genes/sondas.\n")
+cat("Total de amostras no arquivo:", ncol(df), "| genes:", nrow(df), "\n")
 
 ## -----------------------------------------------------------------------
-## 3. Inspecionar metadados reais das amostras (OBRIGATORIO antes de filtrar)
+## 3. Selecionar as amostras de uretra de rato em 36h
 ## -----------------------------------------------------------------------
 
-pd <- pData(eset_rat)
+untreated_36h <- grep("Rat_Urethra_Untreated_36hr", colnames(df), value = TRUE)
+treated_36h   <- grep("Rat_Urethra_Treated_36hr", colnames(df), value = TRUE)
 
-## Imprime todas as colunas de caracteristicas/titulo/fonte para voce
-## conferir os rotulos EXATOS usados neste dataset
-meta_cols <- grep("characteristics|title|source_name|description",
-                   colnames(pd), ignore.case = TRUE, value = TRUE)
-print(pd[, meta_cols])
+cat("\nAmostras Untreated_36h (lesao, sem tratamento):\n"); print(untreated_36h)
+cat("\nAmostras Treated_36h (lesao + hMSC):\n"); print(treated_36h)
 
-## AJUSTAR AQUI se necessario: nomes das colunas de tempo e de grupo/tratamento
-time_col  <- grep("time", colnames(pd), ignore.case = TRUE, value = TRUE)[1]
-group_col <- grep("treat|agent|group|injury|condition",
-                   colnames(pd), ignore.case = TRUE, value = TRUE)[1]
+sel <- c(untreated_36h, treated_36h)
+counts_sub <- df[, sel]
 
-cat("\nColuna de tempo detectada:", time_col, "\n")
-cat("Coluna de grupo/tratamento detectada:", group_col, "\n")
-cat("\nValores unicos de tempo:\n"); print(unique(pd[[time_col]]))
-cat("\nValores unicos de grupo:\n"); print(unique(pd[[group_col]]))
+group <- factor(c(rep("Untreated", length(untreated_36h)),
+                   rep("Treated", length(treated_36h))),
+                levels = c("Untreated", "Treated"))
+coldata <- data.frame(row.names = sel, group = group)
 
-## -----------------------------------------------------------------------
-## 4. Definir os dois grupos de comparacao
-##    Grupo A = lesao (vaginal distension), SEM tratamento com hMSC, 36h
-##    Grupo B = controle / tecido normal (nao lesionado)
-## -----------------------------------------------------------------------
-## AJUSTAR AQUI conforme os valores reais impressos acima.
-
-is_36h <- str_detect(as.character(pd[[time_col]]), "36")
-
-is_injury_untreated <- str_detect(as.character(pd[[group_col]]),
-                                   regex("injur|distension|VD|lesao|trauma", ignore_case = TRUE)) &
-                        !str_detect(as.character(pd[[group_col]]),
-                                    regex("hMSC|MSC|stem cell|treated|therap", ignore_case = TRUE))
-
-is_control <- str_detect(as.character(pd[[group_col]]),
-                          regex("control|normal|sham|uninjured|naive", ignore_case = TRUE))
-
-grupo_lesao_36h <- rownames(pd)[is_36h & is_injury_untreated]
-grupo_controle  <- rownames(pd)[is_control]
-
-cat("\nAmostras no grupo LESAO 36h SEM tratamento:", length(grupo_lesao_36h), "\n")
-print(grupo_lesao_36h)
-cat("\nAmostras no grupo CONTROLE:", length(grupo_controle), "\n")
-print(grupo_controle)
-
-## Se o dataset nao tiver um grupo controle "puro" separado por tempo,
-## uma alternativa e comparar contra o grupo lesao+hMSC no mesmo tempo (36h)
-## para isolar o efeito do tratamento, em vez do efeito da lesao:
-# grupo_alt_tratado_36h <- rownames(pd)[is_36h & str_detect(as.character(pd[[group_col]]),
-#                            regex("hMSC|MSC|treated", ignore_case = TRUE))]
-
-stopifnot("Grupo de lesao 36h vazio - ajuste os regex da Secao 3/4" = length(grupo_lesao_36h) > 0)
-stopifnot("Grupo controle vazio - ajuste os regex da Secao 3/4" = length(grupo_controle) > 0)
-
-amostras_usadas <- c(grupo_controle, grupo_lesao_36h)
-grupo <- factor(c(rep("Controle", length(grupo_controle)),
-                   rep("Lesao_36h_SemTratamento", length(grupo_lesao_36h))),
-                levels = c("Controle", "Lesao_36h_SemTratamento"))
-
-eset_comp <- eset_rat[, amostras_usadas]
+## Aviso de QC: confira a profundidade de sequenciamento das amostras usadas
+cat("\nProfundidade de sequenciamento (soma de contagens) por amostra:\n")
+print(colSums(counts_sub))
 
 ## -----------------------------------------------------------------------
-## 5. Expressao diferencial (limma)
+## 4. Filtro de baixa expressao + DESeq2
 ## -----------------------------------------------------------------------
 
-exprs_mat <- exprs(eset_comp)
-if (max(exprs_mat, na.rm = TRUE) > 100) {
-  exprs_mat <- log2(exprs_mat + 1)
-}
+keep <- rowSums(counts_sub >= 10) >= 3
+cat("\nGenes antes do filtro:", nrow(counts_sub), "| depois do filtro:", sum(keep), "\n")
+counts_sub <- counts_sub[keep, ]
 
-design <- model.matrix(~ grupo)
-fit <- lmFit(exprs_mat, design)
-fit <- eBayes(fit)
+dds <- DESeqDataSetFromMatrix(countData = counts_sub, colData = coldata, design = ~ group)
+dds <- DESeq(dds)
 
-deg_table <- topTable(fit, coef = 2, number = Inf, adjust.method = "BH") %>%
-  tibble::rownames_to_column("Probe_ID") %>%
-  arrange(adj.P.Val)
+res <- results(dds, contrast = c("group", "Treated", "Untreated"), alpha = 0.05)
+## Shrinkage do log2FoldChange (reduz inflacao em genes de baixa contagem)
+res_shrunk <- lfcShrink(dds, contrast = c("group", "Treated", "Untreated"), res = res, type = "normal")
 
-## Anexa o simbolo do gene de rato, se disponivel na anotacao da plataforma
-fdata <- fData(eset_rat)
-symbol_col <- grep("gene.symbol|symbol", colnames(fdata), ignore.case = TRUE, value = TRUE)[1]
-if (!is.na(symbol_col)) {
-  deg_table$Rat_Gene_Symbol <- fdata[deg_table$Probe_ID, symbol_col]
-} else {
-  deg_table$Rat_Gene_Symbol <- deg_table$Probe_ID
-}
+res_df <- as.data.frame(res_shrunk)
+res_df$Rat_Gene_Symbol <- rownames(res_df)
+res_df <- res_df[order(res_df$padj), ]
+rownames(res_df) <- NULL
 
-deg_sig <- deg_table %>% filter(adj.P.Val < 0.05, abs(logFC) > 1)
-cat("\nGenes diferencialmente expressos (Lesao_36h_SemTratamento vs Controle,",
-    "padj<0.05, |logFC|>1):", nrow(deg_sig), "\n")
-
-write.csv(deg_table, file.path("results", "GSE149072_36h_lesao_vs_controle_completo.csv"),
-          row.names = FALSE)
-write.csv(deg_sig, file.path("results", "GSE149072_36h_lesao_vs_controle_significativos.csv"),
-          row.names = FALSE)
+sig <- subset(res_df, !is.na(padj) & padj < 0.05 & abs(log2FoldChange) > 1)
+cat("\nGenes testados:", nrow(res_df), "| DEGs significativos (padj<0.05, |log2FC|>1):", nrow(sig), "\n")
 
 ## -----------------------------------------------------------------------
-## 6A. Ortologos humanos - metodo orthogene (recomendado, mais simples)
+## 5. Ortologos humanos (pacote CRAN 'homologene', base NCBI HomoloGene)
 ## -----------------------------------------------------------------------
 
-rat_genes <- unique(na.omit(deg_sig$Rat_Gene_Symbol))
-orth_table <- NULL
+orth <- homologene(sig$Rat_Gene_Symbol, inTax = 10116, outTax = 9606)
+## colunas tipicas: <symbol_rato>, <symbol_humano>, <geneID_rato>, <geneID_humano>
+colnames(orth)[1:2] <- c("Rat_Gene_Symbol", "Human_Ortholog_Symbol")
 
-if (requireNamespace("orthogene", quietly = TRUE) && length(rat_genes) > 0) {
-  orth_result <- tryCatch({
-    orthogene::convert_orthologs(
-      gene_df = rat_genes,
-      input_species = "rat",
-      output_species = "human",
-      non121_strategy = "drop_both_species",
-      method = "homologene"
-    )
-  }, error = function(e) { message("orthogene falhou: ", e$message); NULL })
+deg_com_ortologos <- merge(sig, orth[, c("Rat_Gene_Symbol", "Human_Ortholog_Symbol")],
+                            by = "Rat_Gene_Symbol", all.x = TRUE)
+deg_com_ortologos <- deg_com_ortologos[order(deg_com_ortologos$padj), ]
 
-  if (!is.null(orth_result)) {
-    orth_table <- orth_result %>%
-      tibble::rownames_to_column("Human_Ortholog_Symbol") %>%
-      rename(Rat_Gene_Symbol = input_gene)
-  }
-}
+n_com <- sum(!is.na(deg_com_ortologos$Human_Ortholog_Symbol))
+cat("Genes com ortologo humano identificado:", n_com, "de", nrow(sig), "\n")
 
 ## -----------------------------------------------------------------------
-## 6B. Ortologos humanos - metodo biomaRt (fallback caso orthogene falhe)
+## 6. Exportar
 ## -----------------------------------------------------------------------
 
-if (is.null(orth_table) && length(rat_genes) > 0) {
-  rat_mart   <- biomaRt::useMart("ensembl", dataset = "rnorvegicus_gene_ensembl")
-  human_mart <- biomaRt::useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+write.csv(res_df, "results/GSE149072_36h_DESeq2_completo.csv", row.names = FALSE)
+write.csv(deg_com_ortologos, "results/GSE149072_36h_DEGs_com_ortologos.csv", row.names = FALSE)
 
-  orth_biomart <- biomaRt::getLDS(
-    attributes  = "external_gene_name",
-    filters     = "external_gene_name",
-    values      = rat_genes,
-    mart        = rat_mart,
-    attributesL = "hgnc_symbol",
-    martL       = human_mart,
-    uniqueRows  = TRUE
-  )
-  colnames(orth_biomart) <- c("Rat_Gene_Symbol", "Human_Ortholog_Symbol")
-  orth_table <- orth_biomart %>% filter(Human_Ortholog_Symbol != "")
-}
+wb <- createWorkbook()
+addWorksheet(wb, "DEGs_significativos_ortologos")
+writeData(wb, "DEGs_significativos_ortologos", deg_com_ortologos)
+addWorksheet(wb, "DEGs_completo_36h")
+writeData(wb, "DEGs_completo_36h", res_df)
+saveWorkbook(wb, "results/GSE149072_36h_DEGs_ortologos_humanos.xlsx", overwrite = TRUE)
 
-## -----------------------------------------------------------------------
-## 7. Juntar DEGs + ortologos humanos e exportar
-## -----------------------------------------------------------------------
-
-if (!is.null(orth_table)) {
-  deg_com_ortologos <- deg_sig %>%
-    inner_join(orth_table, by = "Rat_Gene_Symbol") %>%
-    arrange(adj.P.Val)
-
-  cat("\nGenes com ortologo humano identificado:", nrow(deg_com_ortologos), "de",
-      nrow(deg_sig), "DEGs significativos.\n")
-
-  write.csv(deg_com_ortologos,
-            file.path("results", "GSE149072_36h_DEGs_ortologos_humanos.csv"),
-            row.names = FALSE)
-
-  wb <- createWorkbook()
-  addWorksheet(wb, "DEG_rato_36h_vs_controle")
-  writeData(wb, "DEG_rato_36h_vs_controle", deg_sig)
-  addWorksheet(wb, "DEG_com_ortologos_humanos")
-  writeData(wb, "DEG_com_ortologos_humanos", deg_com_ortologos)
-  saveWorkbook(wb, file.path("results", "GSE149072_36h_resultado_final.xlsx"),
-               overwrite = TRUE)
-
-  cat("\nResultado final salvo em results/GSE149072_36h_resultado_final.xlsx\n")
-} else {
-  warning("Nao foi possivel mapear ortologos humanos (orthogene e biomaRt falharam ",
-          "ou nao ha genes significativos). Confira conexao com Ensembl/Homologene.")
-}
-
-cat("\nAnalise concluida.\n")
+cat("\nAnalise concluida. Resultado final em results/GSE149072_36h_DEGs_ortologos_humanos.xlsx\n")

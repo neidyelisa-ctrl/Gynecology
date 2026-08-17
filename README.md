@@ -12,12 +12,18 @@ análise em R.
 - `R/analysis_geo_pop_sui.R` — script para RStudio que baixa um dataset do GEO (`GEOquery`),
   roda controle de qualidade (PCA), expressão diferencial (`limma`), volcano plot, heatmap e
   enriquecimento funcional GO/KEGG (`clusterProfiler`).
-- `R/analysis_GSE149072_36h_orthologs.R` — script específico para o **GSE149072**
-  ("Gene expression profiling of tissue and hMSC xenografts in a rat postpartum urinary
-  injury model", Sadeghi et al. 2020). Isola as amostras de rato (Rattus norvegicus),
-  filtra o grupo lesão sem tratamento no tempo de 36h, roda expressão diferencial (`limma`)
-  contra o grupo controle e converte os DEGs de rato para ortólogos humanos
-  (`orthogene`/`biomaRt`).
+- `R/analysis_GSE149072_36h_orthologs.R` — pipeline **real e já executado** sobre o
+  **GSE149072** ("Gene expression profiling of tissue and hMSC xenografts in a rat
+  postpartum urinary injury model", Sadeghi et al. 2020, DOI 10.1089/ten.tea.2020.0033).
+  Roda DESeq2 sobre `data/GSE149072_rawCounts.csv` comparando uretra de rata em 36h
+  pós-lesão **sem tratamento** (Untreated) vs. **com hMSC** (Treated), e converte os DEGs
+  de rato para ortólogos humanos via HomoloGene (pacote `homologene`).
+- `data/GSE149072_rawCounts.csv` — contagens brutas de RNA-seq do GSE149072 (36 amostras:
+  uretra de rato tratada/não tratada em 4 tempos × 3 réplicas, mais células hMSC humanas
+  isoladas), fornecidas pelo usuário a partir da página do GEO.
+- `results/GSE149072_36h_DEGs_ortologos_humanos.xlsx` — resultado real da análise: 110 DEGs
+  significativos (padj<0.05, |log2FC|>1) entre uretra lesionada-sem-tratamento e
+  lesionada-tratada-com-hMSC em 36h, com 88 ortólogos humanos identificados.
 
 ## Como usar
 
@@ -26,17 +32,28 @@ análise em R.
 3. Em `analysis_geo_pop_sui.R`, ajuste `GSE_ID` na Seção 3 para o accession desejado (ex.:
    `GSE53868`, `GSE12852`, `GSE28660`) — a lista completa está em
    `data/POP_SUI_GEO_datasets.xlsx`.
-4. Em `analysis_GSE149072_36h_orthologs.R`, confira a saída impressa dos metadados reais
-   (Seção 3) e ajuste os filtros de grupo/tempo (Seção 4) se os rótulos exatos do GEO
-   diferirem dos padrões usados por default.
-5. Execute o script por blocos. Os resultados (CSV, gráficos e Excel final) são salvos em
-   `results/`.
+4. `analysis_GSE149072_36h_orthologs.R` já está pronto para rodar como está — ele lê
+   diretamente `data/GSE149072_rawCounts.csv` e reproduz o resultado salvo em `results/`.
+5. Execute o script por blocos. Os resultados (CSV e Excel final) são salvos em `results/`.
 
-## Principal achado da busca
+## Principal achado da busca de datasets
 
 Foram encontrados vários datasets públicos no GEO dedicados a **POP** (parede vaginal
 anterior e ligamentos uterossacrais/redondos, incluindo um dataset de single-cell RNA-seq).
 Para **SUI** isoladamente, não foi localizado nenhum dataset de expressão gênica com
-accession pública confirmada — a literatura de referência usa microarray/proteômica sem
-depósito público identificado nesta busca. Detalhes e recomendações para expandir a busca
-estão na aba "Notas_metodologicas" da planilha.
+accession pública confirmada por busca automática — mas o usuário identificou e forneceu o
+**GSE149072** (modelo de SUI/lesão pós-parto em ratas, com xenograft de hMSC humano), que foi
+efetivamente baixado e analisado (ver acima). Detalhes e recomendações para expandir a busca
+estão na aba "Notas_metodologicas" da planilha `POP_SUI_GEO_datasets.xlsx`.
+
+## Resultado da análise do GSE149072 (36h, lesão sem tratamento vs. tratada com hMSC)
+
+- Comparação: `Rat_Urethra_Untreated_36hr` (n=3) vs. `Rat_Urethra_Treated_36hr` (n=3) — única
+  comparação possível no arquivo de contagens para esse tempo, já que não há amostras de
+  uretra normal/não lesionada no arquivo fornecido.
+- Método: DESeq2, filtro de baixa expressão, shrinkage de log2FoldChange tipo "normal".
+- 12.806 genes testados após filtro; **110 DEGs significativos** (padj<0.05, |log2FC|>1);
+  **88 com ortólogo humano** identificado via NCBI HomoloGene.
+- Aviso de qualidade: a amostra `Rat_Urethra_Treated_12hr_M2` tem profundidade de
+  sequenciamento muito abaixo das demais — não afeta esta comparação (é do tempo de 12h),
+  mas vale conferir antes de usar essa amostra em outra análise.
