@@ -21,9 +21,16 @@ análise em R.
 - `data/GSE149072_rawCounts.csv` — contagens brutas de RNA-seq do GSE149072 (36 amostras:
   uretra de rato tratada/não tratada em 4 tempos × 3 réplicas, mais células hMSC humanas
   isoladas), fornecidas pelo usuário a partir da página do GEO.
-- `results/GSE149072_36h_DEGs_ortologos_humanos.xlsx` — resultado real da análise: 110 DEGs
-  significativos (padj<0.05, |log2FC|>1) entre uretra lesionada-sem-tratamento e
-  lesionada-tratada-com-hMSC em 36h, com 88 ortólogos humanos identificados.
+- `data/GSE208261_raw_counts_GRCh38.p13_NCBI.tsv` — contagens brutas de RNA-seq do GSE208261
+  (24 amostras humanas: POP vs. Controle, 12 idosas + 12 jovens), fornecidas pelo usuário.
+- `results/GSE149072_36h_DEGs_ortologos_humanos.xlsx` — DEGs de SUI em 36h (padj<0.05,
+  |log2FC|>1) com ortólogos humanos.
+- `R/analysis_SUI_POP_crosscomparison.R` — pipeline **real e já executado** que roda os DEGs
+  de SUI (GSE149072, 36h e 72h) e de POP (GSE208261), converte os DEGs de rato para
+  ortólogos humanos via HomoloGene, e cruza os dois conjuntos para achar genes em comum.
+- `results/SUI_x_POP_36h_genes_comuns.xlsx` — resultado real do cruzamento: os genes em
+  comum entre SUI e POP em 36h (única janela de tempo com correspondências), já classificados
+  como concordantes ou discordantes na direção da desregulação.
 
 ## Como usar
 
@@ -32,8 +39,9 @@ análise em R.
 3. Em `analysis_geo_pop_sui.R`, ajuste `GSE_ID` na Seção 3 para o accession desejado (ex.:
    `GSE53868`, `GSE12852`, `GSE28660`) — a lista completa está em
    `data/POP_SUI_GEO_datasets.xlsx`.
-4. `analysis_GSE149072_36h_orthologs.R` já está pronto para rodar como está — ele lê
-   diretamente `data/GSE149072_rawCounts.csv` e reproduz o resultado salvo em `results/`.
+4. `analysis_GSE149072_36h_orthologs.R` e `analysis_SUI_POP_crosscomparison.R` já estão
+   prontos para rodar como estão — leem os arquivos de `data/` e reproduzem os resultados
+   salvos em `results/`.
 5. Execute o script por blocos. Os resultados (CSV e Excel final) são salvos em `results/`.
 
 ## Principal achado da busca de datasets
@@ -57,3 +65,16 @@ estão na aba "Notas_metodologicas" da planilha `POP_SUI_GEO_datasets.xlsx`.
 - Aviso de qualidade: a amostra `Rat_Urethra_Treated_12hr_M2` tem profundidade de
   sequenciamento muito abaixo das demais — não afeta esta comparação (é do tempo de 12h),
   mas vale conferir antes de usar essa amostra em outra análise.
+
+## Cruzamento SUI x POP (FDR<0.05, |log2FC|>0.5)
+
+- **SUI (GSE149072)**: Untreated vs. Treated (hMSC) em uretra de rata — 36h: **110 DEGs**
+  (88 com ortólogo humano); 72h: **58 DEGs** (47 com ortólogo humano).
+- **POP (GSE208261)**: POP (n=12) vs. Controle (n=12), ajustando por grupo etário (idosa/jovem)
+  — **642 DEGs**.
+- Cruzamento dos ortólogos humanos do SUI com os DEGs de POP: **4 genes em comum em 36h,
+  0 em 72h** — por isso 36h é a única janela de tempo viável para este cruzamento.
+- Os 4 genes em comum: **INPP4B**, **ECM1**, **BEND3** (direção discordante entre as duas
+  doenças) e **KREMEN1** (única com direção concordante — regulado para cima tanto na lesão
+  não tratada quanto no POP). Ver a aba `Genes_em_comum_36h` da planilha para os números
+  completos (log2FC e padj de cada análise) e a lógica de classificação de direção.
