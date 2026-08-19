@@ -31,6 +31,13 @@ análise em R.
 - `results/SUI_x_POP_36h_genes_comuns.xlsx` — resultado real do cruzamento: os genes em
   comum entre SUI e POP em 36h (única janela de tempo com correspondências), já classificados
   como concordantes ou discordantes na direção da desregulação.
+- `R/analysis_neuro_candidate_genes.R` — testa uma lista de 25 genes candidatos da via
+  neurotrófica/neuropeptídica (curada de Shen et al. 2024 e Masyhuroh et al. 2024) contra os
+  DEGs reais de SUI e POP já calculados — a base da proposta de tema de pesquisa abaixo.
+- `results/Proposta_tema_neuro_POP_SUI.xlsx` — proposta de tema de pesquisa: sinalização
+  neurotrófica/neuropeptídica como eixo convergente entre POP e SUI, com fundamentação na
+  literatura, tabela de genes candidatos testados contra os dados reais, e roteiro
+  metodológico para expandir o trabalho.
 
 ## Como usar
 
@@ -78,3 +85,27 @@ estão na aba "Notas_metodologicas" da planilha `POP_SUI_GEO_datasets.xlsx`.
   doenças) e **KREMEN1** (única com direção concordante — regulado para cima tanto na lesão
   não tratada quanto no POP). Ver a aba `Genes_em_comum_36h` da planilha para os números
   completos (log2FC e padj de cada análise) e a lógica de classificação de direção.
+
+## Proposta de tema: convergência via sinalização neural (não gene-a-gene)
+
+Cruzar o transcriptoma inteiro gene-a-gene deu uma amostra pequena demais (4-6 genes) para
+testar enriquecimento estatístico de sobreposição. Alternativa mais robusta, ancorada em
+literatura publicada (Shen et al. 2024 — revisão sistemática sobre nervo pélvico em POP/SUI;
+Masyhuroh et al. 2024): testar se o **mesmo sistema biológico** (sinalização de
+neurotrofinas/neuropeptídeos ligada à inervação pélvica) está desregulado nas duas condições,
+mesmo que por genes diferentes dentro desse sistema.
+
+Achado real (25 genes candidatos testados, ver `results/candidate_neuro_genes_table.csv`):
+- **EDNRA** e **GFRA3** (receptor da família GDNF) — significativos no **SUI em 36h**
+  (padj = 0.0003 e 0.013), não no POP.
+- **NPY1R**, **NPY5R** e **NTF3** — significativos no **POP** (padj = 0.002–0.034), não
+  testados/detectados no SUI.
+- **ADCYAP1** (gene do PACAP) — tendência forte no POP (padj = 0.079), consistente com PACAP
+  reduzido relatado na literatura em tecido humano de SUI/POP.
+- Nenhum gene bateu significativo nos dois lados ao mesmo tempo, mas o padrão inteiro aponta
+  para o mesmo sistema (neurotrofinas/neuropeptídeos/receptores GDNF) desregulado
+  independentemente nos dois lados — uma conclusão honesta e ancorada em literatura, em vez
+  de forçar uma sobreposição gene-a-gene estatisticamente frágil.
+
+Ver `results/Proposta_tema_neuro_POP_SUI.xlsx` para a fundamentação completa, evidência da
+literatura citada e roteiro metodológico proposto para expandir este trabalho.
