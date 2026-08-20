@@ -109,3 +109,22 @@ Achado real (25 genes candidatos testados, ver `results/candidate_neuro_genes_ta
 
 Ver `results/Proposta_tema_neuro_POP_SUI.xlsx` para a fundamentação completa, evidência da
 literatura citada e roteiro metodológico proposto para expandir este trabalho.
+
+## GO enrichment (offline) + próximo passo: hub genes e KEGG via STRING
+
+- `R/analysis_GO_enrichment_and_STRING_export.R` — enriquecimento GO Biological Process
+  rodado **sem depender de clusterProfiler/internet** (teste hipergeométrico manual via
+  `org.Hs.eg.db` + `GO.db`, equivalente ao `enrichGO`). Resultado real em
+  `results/GO_BP_SUI_36h.csv` e `results/GO_BP_POP.csv`.
+- Nenhum termo passou de padj<0.05 após correção BH (esperado com listas de DEG desse
+  tamanho contra milhares de termos GO), mas os termos com menor p-valor bruto no SUI 36h
+  são **"sympathetic nervous system development"**, **"cellular response to BDNF
+  stimulus"** e **"dendrite extension"** — reforçando o eixo neural de forma não-enviesada
+  (sem seleção manual de genes candidatos).
+- `results/STRING_input_SUI_36h_genes.txt` (88 genes) e `results/STRING_input_POP_genes.txt`
+  (624 genes) — listas prontas para colar em [string-db.org](https://string-db.org)
+  ("Multiple proteins" → Homo sapiens → Search) para obter a rede PPI (necessária para
+  hub genes) e o enriquecimento KEGG — o STRING/KEGG não são acessíveis diretamente deste
+  ambiente. Depois de baixar a rede (aba "Exports" → TSV) e o enriquecimento KEGG (aba
+  "Analysis"), os hub genes serão calculados localmente com `igraph` (grau, closeness,
+  betweenness).
