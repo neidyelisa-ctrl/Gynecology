@@ -125,6 +125,30 @@ literatura citada e roteiro metodológico proposto para expandir este trabalho.
   (624 genes) — listas prontas para colar em [string-db.org](https://string-db.org)
   ("Multiple proteins" → Homo sapiens → Search) para obter a rede PPI (necessária para
   hub genes) e o enriquecimento KEGG — o STRING/KEGG não são acessíveis diretamente deste
-  ambiente. Depois de baixar a rede (aba "Exports" → TSV) e o enriquecimento KEGG (aba
-  "Analysis"), os hub genes serão calculados localmente com `igraph` (grau, closeness,
-  betweenness).
+  ambiente.
+
+## Hub genes (rede PPI) e comparação de vias SUI x POP
+
+- `R/analysis_hub_genes_igraph.R` — calcula hub genes com `igraph` (grau, betweenness,
+  força ponderada pelo `combined_score` do STRING — equivalente ao cytoHubba) a partir das
+  redes exportadas do STRING pelo usuário (`results/STRING_network_SUI_36h.tsv`,
+  `results/STRING_network_POP.tsv`) e compara com o enriquecimento KEGG exportado
+  (`results/KEGG_enrichment_POP.tsv`).
+- `results/HubGenes_GO_KEGG_SUI_x_POP.xlsx` — resultado real e completo.
+
+**Achados reais:**
+- Rede do SUI (36h): apenas **23 nós / 18 interações** — bem esparsa (só 23 dos 88 genes de
+  entrada tinham interação de alta confiança no STRING). Rede do POP: **342 nós / 787
+  interações** — bem mais densa.
+- **Nenhuma via GO ou KEGG significativa para o SUI** (confirmado tanto pelo STRING quanto
+  pelo teste hipergeométrico offline deste repositório) — esperado dado o tamanho pequeno
+  da lista e a rede esparsa, não uma falha da análise.
+- **POP**: 9 vias KEGG significativas (FDR<0,05), dominadas por sinalização de cálcio/
+  músculo liso/cardiomiócito (Calcium signaling, cGMP-PKG, Vascular smooth muscle
+  contraction, Adrenergic signaling in cardiomyocytes) e metabolismo de purina.
+- **Zero genes em comum** entre as duas redes inteiras (23 nós do SUI vs. 342 do POP) —
+  nenhuma convergência de hub gene ou de via GO/KEGG entre SUI e POP com os dados atuais.
+  Isso reforça que a via de convergência mais defensável continua sendo a curadoria por
+  literatura (aba de proposta de tema), não a rede PPI bruta.
+- Curiosidade: 2 dos hub genes do SUI (**AGRN**, **GPC4**) são genes de sinapse/junção
+  neuromuscular — reforça o eixo neural mesmo dentro desta análise independente.
