@@ -51,17 +51,22 @@ compute_hubs <- function(tsv_path, label) {
   tab
 }
 
-hubs_sui <- compute_hubs("results/STRING_network_SUI_36h.tsv", "SUI_36h")
+hubs_sui36 <- compute_hubs("results/STRING_network_SUI_36h.tsv", "SUI_36h")
+hubs_sui72 <- compute_hubs("results/STRING_network_SUI_72h.tsv", "SUI_72h")
 hubs_pop <- compute_hubs("results/STRING_network_POP.tsv", "POP")
 
-## Genes em comum entre as duas redes inteiras (nao so os hubs)
-sui_nodes <- unique(c(read.delim("results/STRING_network_SUI_36h.tsv")[[1]],
-                       read.delim("results/STRING_network_SUI_36h.tsv")[[2]]))
-pop_nodes <- unique(c(read.delim("results/STRING_network_POP.tsv")[[1]],
-                       read.delim("results/STRING_network_POP.tsv")[[2]]))
-common_nodes <- intersect(sui_nodes, pop_nodes)
-cat("\nGenes em comum entre as DUAS redes inteiras (SUI x POP):", length(common_nodes), "\n")
-if (length(common_nodes) > 0) print(common_nodes)
+## Genes em comum entre cada par de redes inteiras (nao so os hubs)
+get_nodes <- function(tsv_path) {
+  d <- read.delim(tsv_path)
+  unique(c(d[[1]], d[[2]]))
+}
+sui36_nodes <- get_nodes("results/STRING_network_SUI_36h.tsv")
+sui72_nodes <- get_nodes("results/STRING_network_SUI_72h.tsv")
+pop_nodes <- get_nodes("results/STRING_network_POP.tsv")
+
+cat("\nGenes em comum SUI_36h x SUI_72h:", length(intersect(sui36_nodes, sui72_nodes)), "\n")
+cat("Genes em comum SUI_36h x POP:", length(intersect(sui36_nodes, pop_nodes)), "\n")
+cat("Genes em comum SUI_72h x POP:", length(intersect(sui72_nodes, pop_nodes)), "\n")
 
 ## KEGG do POP (exportado do STRING)
 kegg_pop <- read.delim("results/KEGG_enrichment_POP.tsv")

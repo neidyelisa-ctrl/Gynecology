@@ -133,31 +133,39 @@ literatura citada e roteiro metodológico proposto para expandir este trabalho.
   (47 genes) e `results/STRING_input_POP_genes.txt` (624 genes) — listas prontas para colar
   em [string-db.org](https://string-db.org) ("Multiple proteins" → Homo sapiens → Search)
   para obter a rede PPI (hub genes) e o enriquecimento KEGG — string-db.org não é acessível
-  diretamente deste ambiente. O KEGG do SUI 72h ainda não foi verificado (falta o usuário
-  exportar do STRING, como já foi feito para 36h e POP).
+  diretamente deste ambiente. O KEGG do SUI 72h também foi verificado pela usuária no STRING:
+  sem via significativa (mesmo padrão do SUI 36h).
 
-## Hub genes (rede PPI) e comparação de vias SUI x POP
+## Hub genes (rede PPI) e comparação de vias SUI 36h x SUI 72h x POP
 
 - `R/analysis_hub_genes_igraph.R` — calcula hub genes com `igraph` (grau, betweenness,
   força ponderada pelo `combined_score` do STRING — equivalente ao cytoHubba) a partir das
   redes exportadas do STRING pelo usuário (`results/STRING_network_SUI_36h.tsv`,
-  `results/STRING_network_POP.tsv`) e compara com o enriquecimento KEGG exportado
-  (`results/KEGG_enrichment_POP.tsv`).
-- `results/HubGenes_GO_KEGG_SUI_x_POP.xlsx` — resultado real e completo.
+  `results/STRING_network_SUI_72h.tsv`, `results/STRING_network_POP.tsv`) e compara com o
+  enriquecimento KEGG exportado (`results/KEGG_enrichment_POP.tsv`).
+- `results/HubGenes_GO_KEGG_SUI_x_POP.xlsx` — resultado real e completo (5 abas: Resumo,
+  Hub_genes_SUI_36h, Hub_genes_SUI_72h, Hub_genes_POP_top50, KEGG_POP).
 
 **Achados reais:**
-- Rede do SUI (36h): apenas **23 nós / 18 interações** — bem esparsa (só 23 dos 88 genes de
-  entrada tinham interação de alta confiança no STRING). Rede do POP: **342 nós / 787
-  interações** — bem mais densa.
-- **Nenhuma via GO ou KEGG significativa para o SUI** (confirmado tanto pelo STRING quanto
-  pelo teste hipergeométrico offline deste repositório) — esperado dado o tamanho pequeno
-  da lista e a rede esparsa, não uma falha da análise.
+- Rede do SUI 36h: **23 nós / 18 interações** — esparsa (só 23 dos 88 genes de entrada
+  tinham interação de alta confiança no STRING).
+- Rede do SUI 72h: **10 nós / 10 interações** — ainda mais esparsa que a de 36h (10 dos 47
+  genes de entrada). Hub gene principal: **CCNB1** (grau 4), seguido por **DLGAP5, UBE2C,
+  KIF18A** (formam um cluster denso de ciclo celular/mitose), depois **L1CAM** (adesão
+  neural/guia axonal) e **MMP11/MMP7** (remodelação de matriz).
+- Rede do POP: **342 nós / 787 interações** — bem mais densa que as duas do SUI.
+- **Nenhuma via GO ou KEGG significativa para o SUI em nenhum dos dois tempos** (confirmado
+  tanto pelo STRING quanto pelo teste hipergeométrico offline deste repositório) — esperado
+  dado o tamanho pequeno das listas e as redes esparsas, não uma falha da análise.
 - **POP**: 9 vias KEGG significativas (FDR<0,05), dominadas por sinalização de cálcio/
   músculo liso/cardiomiócito (Calcium signaling, cGMP-PKG, Vascular smooth muscle
   contraction, Adrenergic signaling in cardiomyocytes) e metabolismo de purina.
-- **Zero genes em comum** entre as duas redes inteiras (23 nós do SUI vs. 342 do POP) —
-  nenhuma convergência de hub gene ou de via GO/KEGG entre SUI e POP com os dados atuais.
-  Isso reforça que a via de convergência mais defensável continua sendo a curadoria por
-  literatura (aba de proposta de tema), não a rede PPI bruta.
-- Curiosidade: 2 dos hub genes do SUI (**AGRN**, **GPC4**) são genes de sinapse/junção
-  neuromuscular — reforça o eixo neural mesmo dentro desta análise independente.
+- **Zero genes em comum entre qualquer par das três redes** (SUI 36h x SUI 72h, SUI 36h x
+  POP, SUI 72h x POP) — nenhuma convergência de hub gene ou de via GO/KEGG entre SUI e POP
+  com os dados atuais, em nenhum dos tempos. Isso reforça que a via de convergência mais
+  defensável continua sendo a curadoria por literatura (aba de proposta de tema), não a
+  rede PPI bruta.
+- Curiosidade: 2 dos hub genes do SUI 36h (**AGRN**, **GPC4**) são genes de sinapse/junção
+  neuromuscular, e o SUI 72h também tem um hub neural independente (**L1CAM**, adesão/guia
+  axonal) — reforça o eixo neural mesmo dentro desta análise independente, mesmo com o
+  tema dominante do 72h migrando para ciclo celular/ECM.
