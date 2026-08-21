@@ -114,18 +114,27 @@ literatura citada e roteiro metodológico proposto para expandir este trabalho.
 
 - `R/analysis_GO_enrichment_and_STRING_export.R` — enriquecimento GO Biological Process
   rodado **sem depender de clusterProfiler/internet** (teste hipergeométrico manual via
-  `org.Hs.eg.db` + `GO.db`, equivalente ao `enrichGO`). Resultado real em
-  `results/GO_BP_SUI_36h.csv` e `results/GO_BP_POP.csv`.
-- Nenhum termo passou de padj<0.05 após correção BH (esperado com listas de DEG desse
-  tamanho contra milhares de termos GO), mas os termos com menor p-valor bruto no SUI 36h
-  são **"sympathetic nervous system development"**, **"cellular response to BDNF
-  stimulus"** e **"dendrite extension"** — reforçando o eixo neural de forma não-enviesada
-  (sem seleção manual de genes candidatos).
-- `results/STRING_input_SUI_36h_genes.txt` (88 genes) e `results/STRING_input_POP_genes.txt`
-  (624 genes) — listas prontas para colar em [string-db.org](https://string-db.org)
-  ("Multiple proteins" → Homo sapiens → Search) para obter a rede PPI (necessária para
-  hub genes) e o enriquecimento KEGG — o STRING/KEGG não são acessíveis diretamente deste
-  ambiente.
+  `org.Hs.eg.db` + `GO.db`, equivalente ao `enrichGO`), para **SUI 36h, SUI 72h e POP**
+  separadamente. Resultado real em `results/GO_BP_SUI_36h.csv`, `results/GO_BP_SUI_72h.csv`
+  e `results/GO_BP_POP.csv`; DEGs+ortólogos e GO de SUI consolidados em
+  `results/SUI_36h_72h_DEG_ortologos_GO.xlsx`.
+- Nenhum termo passou de padj<0.05 após correção BH em nenhum dos três (esperado com listas
+  de DEG desse tamanho contra milhares de termos GO), mas os termos de menor p-valor bruto
+  contam uma história temporal real no SUI:
+  - **36h**: *sympathetic nervous system development*, *cellular response to BDNF
+    stimulus*, *dendrite extension* — tema dominante: **sistema nervoso** (resposta aguda
+    à lesão).
+  - **72h**: *mitotic cell cycle phase transition*, *collagen catabolic process*,
+    *extracellular matrix disassembly*, *mitotic spindle organization* — tema dominante:
+    **ciclo celular / remodelação de matriz extracelular** (fase de reparo tecidual).
+  - Essa mudança de tema 36h→72h é biologicamente coerente com a cronologia
+    lesão→reparo descrita em Shen et al. 2024.
+- `results/STRING_input_SUI_36h_genes.txt` (88 genes), `results/STRING_input_SUI_72h_genes.txt`
+  (47 genes) e `results/STRING_input_POP_genes.txt` (624 genes) — listas prontas para colar
+  em [string-db.org](https://string-db.org) ("Multiple proteins" → Homo sapiens → Search)
+  para obter a rede PPI (hub genes) e o enriquecimento KEGG — string-db.org não é acessível
+  diretamente deste ambiente. O KEGG do SUI 72h ainda não foi verificado (falta o usuário
+  exportar do STRING, como já foi feito para 36h e POP).
 
 ## Hub genes (rede PPI) e comparação de vias SUI x POP
 

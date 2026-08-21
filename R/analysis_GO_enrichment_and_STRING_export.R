@@ -72,7 +72,9 @@ run_go_enrichment <- function(hit_genes, universe_genes, ont = "BP", min_gs = 5,
 ## SUI 36h
 ## -----------------------------------------------------------------------
 sui_full <- read.csv("results/SUI_36hr_DESeq2_completo.csv")
-orth <- homologene::homologene(sui_full$Rat_Gene_Symbol, inTax = 10116, outTax = 9606)
+sui72_full <- read.csv("results/SUI_72hr_DESeq2_completo.csv")
+all_rat_genes <- unique(c(sui_full$Rat_Gene_Symbol, sui72_full$Rat_Gene_Symbol))
+orth <- homologene::homologene(all_rat_genes, inTax = 10116, outTax = 9606)
 colnames(orth)[1:2] <- c("Rat_Gene_Symbol", "Human_Ortholog_Symbol")
 sui_full_orth <- merge(sui_full, orth[, c("Rat_Gene_Symbol", "Human_Ortholog_Symbol")],
                         by = "Rat_Gene_Symbol", all.x = TRUE)
@@ -85,6 +87,24 @@ cat("SUI 36h - universo (com ortologo):", length(sui_universe), "| DEGs:", lengt
 go_sui <- run_go_enrichment(sui_hits, sui_universe, ont = "BP")
 write.csv(go_sui, "results/GO_BP_SUI_36h.csv", row.names = FALSE)
 writeLines(sui_hits, "results/STRING_input_SUI_36h_genes.txt")
+
+## -----------------------------------------------------------------------
+## SUI 72h
+## -----------------------------------------------------------------------
+sui72_full_orth <- merge(sui72_full, orth[, c("Rat_Gene_Symbol", "Human_Ortholog_Symbol")],
+                          by = "Rat_Gene_Symbol", all.x = TRUE)
+
+sui72_universe <- unique(na.omit(sui72_full_orth$Human_Ortholog_Symbol))
+sui72_hits <- unique(na.omit(sui72_full_orth$Human_Ortholog_Symbol[
+  !is.na(sui72_full_orth$padj) & sui72_full_orth$padj < 0.05 & abs(sui72_full_orth$log2FoldChange) > 0.5]))
+
+cat("SUI 72h - universo (com ortologo):", length(sui72_universe), "| DEGs:", length(sui72_hits), "\n")
+go_sui72 <- run_go_enrichment(sui72_hits, sui72_universe, ont = "BP")
+write.csv(go_sui72, "results/GO_BP_SUI_72h.csv", row.names = FALSE)
+writeLines(sui72_hits, "results/STRING_input_SUI_72h_genes.txt")
+
+cat("\nTop 15 termos GO BP - SUI 72h (por p-valor bruto):\n")
+print(head(go_sui72[, c("TERM", "Count", "pvalue", "p.adjust")], 15))
 
 ## -----------------------------------------------------------------------
 ## POP
