@@ -185,6 +185,41 @@ amostra pequena para enriquecimento estatístico robusto; tratar como hipótese 
 validação (qPCR/imuno-histoquímica de CALML5/KRT10/DMKN em tecido de POP humano), não como
 achado definitivo.
 
+## MATCH CONFIRMADO: os 6 genes da usuária reproduzidos exatamente, via Ensembl
+
+A usuária pediu para eu achar exatamente os mesmos 6 genes que ela obteve com BioMart/Ensembl
+(via Perplexity), já que o HomoloGene não tinha KRT10 nem DMKN. BioMart/Ensembl ao vivo
+continua bloqueado neste ambiente (mesmo teste de sempre: `CONNECT` tunnel 403 para
+`ensembl.org`, `rest.ensembl.org`, `biomart`). Solução: o pacote R **babelgene** (CRAN,
+licença MIT) empacota OFFLINE uma tabela de ortólogos já compilada a partir de 9 bases —
+**Ensembl**, HomoloGene, NCBI, OMA, OrthoDB, Panther, Treefam, EggNOG, Inparanoid (fonte:
+HCOP — HGNC Comparison of Orthology Predictions) — sem precisar de servidor em tempo de
+execução. Baixei o arquivo de dados do pacote direto do GitHub (`raw.githubusercontent.com`,
+acessível neste sandbox) e salvei em `data/babelgene_orthologs.rda`. Confirmado: KRT10→Krt10
+e DMKN→Dmkn aparecem nessa tabela com "Ensembl" listado entre as fontes — os dois genes que
+faltavam no HomoloGene.
+
+- `R/analysis_SUI_POP_ensembl_orthologs.R` — script completo e comentado, pronto para rodar,
+  reproduzindo a receita exata da usuária (sem filtro de baixa contagem, sem covariável de
+  idade no POP, sem `lfcShrink`, FDR<0,05, |log2FC|>0,5) **mais um filtro de ortologia
+  1-para-1** (reproduzindo o "192 human genes with one-to-one orthology" do
+  `thesis_proposal_draft.pdf` dela).
+- `results/MATCH_CONFIRMADO_6genes_Ensembl.xlsx` — resultado completo (4 abas).
+
+**Resultado: 6 de 6, sem sobra, sem falta.** Sem o filtro de 1-para-1, aparecem os 6 genes
+dela mais um extra (ZCCHC12). Aplicando o filtro 1-para-1, o ZCCHC12 cai — porque o gene de
+rato `Zcchc12` mapeia para DOIS genes humanos (ZCCHC12 e ZCCHC18), não é um par 1-para-1.
+Sobra exatamente **CWH43, INPP4B, CALML5, KRT10, SERPINB2, DMKN** — a lista dela, gene por
+gene. Os valores de log2FC e padj batem quase byte a byte com a tabela dela (ex.: CALML5
+SUI_log2FC = 12,042727 aqui vs. 12,04273 dela; INPP4B = -8,406034 vs. -8,40603 dela — a
+diferença é só arredondamento). GO/KEGG desses 6 genes já haviam sido verificados de forma
+independente na seção anterior e continuam válidos (mesma lista de genes).
+
+**Conclusão**: o pipeline da usuária (via Perplexity) estava correto — código rodou certo,
+números batem, resultado é 100% reproduzível por um caminho técnico totalmente diferente
+(fonte de ortólogos diferente, ferramenta diferente, calculado do zero). Essa é a validação
+mais forte possível dentro do que este ambiente permite fazer.
+
 ## Proposta de tema: convergência via sinalização neural (não gene-a-gene)
 
 Cruzar o transcriptoma inteiro gene-a-gene deu uma amostra pequena demais (4-6 genes) para
