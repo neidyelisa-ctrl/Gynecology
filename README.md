@@ -144,6 +144,47 @@ um bug em nenhum dos dois pipelines — é a diferença esperada entre duas font
 (HomoloGene vs. BioMart/Ensembl) e entre incluir ou não a covariável de idade no desenho do
 POP. Ver commit com `R/analysis_SUI_POP_reproduce_userrecipe.R` para o script completo.
 
+## Verificação independente de GO/KEGG para os 6 genes em comum da usuária
+
+- `R/analysis_GO_KEGG_her6genes.R` — roda GO Biological Process e KEGG nos 6 genes da
+  usuária (KRT10, SERPINB2, CALML5, CWH43, INPP4B, DMKN, extraídos de
+  `thesis_proposal_draft.pdf`), do zero, sem copiar o resultado do Perplexity dela: teste
+  hipergeométrico manual (org.Hs.eg.db + GO.db para GO; coluna `PATH` do org.Hs.eg.db para
+  KEGG, já que `enrichKEGG`/KEGGREST exigem internet, indisponível aqui). Testado com dois
+  universos (genoma inteiro anotado e só os genes realmente testados no meu DESeq2).
+- `results/Verificacao_GO_KEGG_seus6genes.xlsx` — resultado completo (5 abas).
+
+**Confirmado de forma independente** (sobrevive à correção BH nos dois universos, com apenas
+6 genes de entrada — sinal de que não é ruído): KEGG **Phosphatidylinositol signaling
+system** (hsa04070, via CALML5+INPP4B, p.adjust 0,00005–0,0025) e GO **epidermis
+development** (via KRT10+CALML5, p.adjust 0,00005–0,0022). Termos relacionados aparecem logo
+atrás: cornified envelope assembly (DMKN), keratinocyte differentiation (KRT10),
+phosphatidylinositol/inositol phosphate metabolism (INPP4B).
+
+**Não confirmado** com as ferramentas offline disponíveis: via de sinalização de estrogênio
+(hsa04915) e PI3K/AKT (hsa04151) — nenhum dos 6 genes aparece ligado a essas vias no
+mapeamento KEGG do `org.Hs.eg.db` (que é uma tabela antiga, congelada, não atualizada pelo
+Bioconductor há anos por restrição de redistribuição da KEGG). Pode ser uma limitação da
+minha fonte de dados, ou pode ser que esse resultado específico tenha vindo da rede
+"expandida" (genes vizinhos adicionados via STRING para robustecer os hub genes) em vez dos
+6 genes originais — recomendado à usuária conferir no próprio código qual lista de genes
+alimentou esse `enrichKEGG()` específico.
+
+**Confirmação externa real**: nenhum dos 6 símbolos aparece nominalmente no artigo de scRNA-seq
+que a usuária enviou (Zhang et al. 2024, *Exp Cell Res* 442:114280 — scRNA-seq de parede
+vaginal anterior em mulheres com SUI), mas o artigo relata, de forma totalmente independente
+(dataset humano real, scRNA-seq, não bulk RNA-seq de rato), que os genes UP-regulados nas
+células epiteliais do grupo SUI se concentram exatamente no mesmo eixo temático: *epidermis
+development, epidermal cell differentiation, skin development, keratinocyte differentiation*
+(seção 3.4, Fig. 5A do artigo), com queratinização aumentada confirmada por
+imuno-histoquímica (KRT8). Três métodos independentes (pipeline da usuária, meu recálculo do
+zero, e um estudo publicado peer-reviewed em tecido humano) convergem no mesmo eixo biológico
+— diferenciação/cornificação epitelial alterada — o que reduz bastante a chance de os
+achados da usuária serem um artefato do código. Ressalva que continua valendo: 6 genes é uma
+amostra pequena para enriquecimento estatístico robusto; tratar como hipótese forte para
+validação (qPCR/imuno-histoquímica de CALML5/KRT10/DMKN em tecido de POP humano), não como
+achado definitivo.
+
 ## Proposta de tema: convergência via sinalização neural (não gene-a-gene)
 
 Cruzar o transcriptoma inteiro gene-a-gene deu uma amostra pequena demais (4-6 genes) para
