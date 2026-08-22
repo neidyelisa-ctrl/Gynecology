@@ -116,6 +116,34 @@ comum com o SUI. KEGG e hub genes desta reanálise dependem de novas exportaçõ
 (listas em `results/STRING_input_SUI_36h_nofilter_genes.txt` e
 `results/STRING_input_POP_nofilter_genes.txt`) — ainda não fornecidas.
 
+## Causa raiz completa da diferença de genes (ex.: CALML5) entre a análise da usuária e a minha
+
+A usuária forneceu o histórico real do console dela (`ANALYSIS_SUI.docx`). Comparando linha a
+linha com o meu pipeline, além do filtro de baixa contagem (já resolvido acima), havia mais
+duas diferenças em POP:
+1. O modelo dela é `design = ~ condition` — **sem** a covariável de grupo etário (D/Y) que eu
+   uso (`~ age_group + condition`).
+2. Ela nunca chama `lfcShrink()` — usa o `log2FoldChange` bruto (MLE) de `results()`.
+
+`R/analysis_SUI_POP_reproduce_userrecipe.R` testa isso isoladamente. Resultado decisivo
+(`R/pop_age_shrink_4combos_diagnostic.R`, testado nos 7 genes de interesse — CWH43, INPP4B,
+CALML5, KRT10, SERPINB2, DMKN, ZCCHC12): **`lfcShrink` não muda nenhum `padj`** (nunca muda — encolhimento
+só afeta a estimativa de log2FC, não o teste de Wald) e não muda o veredito de significância
+nesses genes. **A covariável de idade é a causa real**: com `~ age_group + condition`, só
+INPP4B e ZCCHC12 desses 7 passam de padj<0,05; sem a covariável (`~ condition`, como no
+script dela), **todos os 7 passam** — incluindo **CALML5** (padj vai de 0,17 → 0,033).
+
+Rodando o pipeline completo com a receita exata dela (sem filtro, sem covariável de idade,
+sem shrink, ortólogos via HomoloGene — não BioMart, por instrução da própria usuária): **5
+dos 6 genes da lista dela batem exatamente** (CWH43, INPP4B, CALML5, SERPINB2, e mais
+ZCCHC12 que não está na lista dela). Os únicos 2 que não bati são **KRT10** (não existe no
+HomoloGene em nenhum grupo de ortólogo — falha real de cobertura da base) e **DMKN** (existe
+no HomoloGene, mas o grupo de ortólogos dele não inclui rato — só humano/chimpanzé/macaco/
+camundongo) — ambos só aparecem via BioMart, que tem uma base de mapeamento diferente. Não é
+um bug em nenhum dos dois pipelines — é a diferença esperada entre duas fontes de ortologia
+(HomoloGene vs. BioMart/Ensembl) e entre incluir ou não a covariável de idade no desenho do
+POP. Ver commit com `R/analysis_SUI_POP_reproduce_userrecipe.R` para o script completo.
+
 ## Proposta de tema: convergência via sinalização neural (não gene-a-gene)
 
 Cruzar o transcriptoma inteiro gene-a-gene deu uma amostra pequena demais (4-6 genes) para
