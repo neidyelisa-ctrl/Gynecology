@@ -86,6 +86,36 @@ estão na aba "Notas_metodologicas" da planilha `POP_SUI_GEO_datasets.xlsx`.
   não tratada quanto no POP). Ver a aba `Genes_em_comum_36h` da planilha para os números
   completos (log2FC e padj de cada análise) e a lógica de classificação de direção.
 
+## Reanálise SEM filtro de baixa contagem (a pedido da usuária)
+
+- `R/analysis_SUI_POP_nofilter.R` e `R/analysis_GO_nofilter.R` — reproduzem o mesmo
+  cruzamento SUI(36h) x POP acima, mas **sem** o filtro de baixa expressão
+  (`rowSums(contagem≥10) ≥ N amostras`) que o pipeline principal aplica antes do DESeq2.
+  Motivação: a usuária identificou, pelo próprio histórico de análise, que **Cwh43** e
+  **Calml5** (genes com contagem quase zero, só 1-2 réplicas com sinal) eram removidos por
+  esse filtro antes mesmo de entrarem no teste estatístico.
+- `results/SUI_x_POP_36h_SEM_FILTRO.xlsx` — resultado real e completo (6 abas).
+
+**Resultado**: sem o filtro, **245 DEGs** no SUI 36h (181 com ortólogo humano) e **631 DEGs**
+no POP — bem mais que com filtro (110 e 642 → note que o total de POP já era alto mesmo com
+filtro; o salto grande é no SUI). **6 genes em comum** (ZCCHC12, INPP4B, ECM1, NTF3, BEND3,
+KREMEN1) — o mesmo número que a usuária tinha encontrado na análise dela (sem filtro, sem
+covariável de idade, ortólogos via BioMart), confirmando que o filtro de baixa contagem é
+de fato o que explica a diferença de 4 → 6 genes. A composição exata difere um pouco porque
+este pipeline mantém a metodologia própria (HomoloGene + covariável de idade no POP).
+
+**Ressalva importante**: 4 dos 6 genes em comum (**ZCCHC12, INPP4B, NTF3, KREMEN1**) têm ≥2
+de 6 amostras com contagem bruta ZERO no SUI 36h — **KREMEN1** inclusive com separação
+perfeita 3 amostras positivas / 3 zeradas — exatamente o padrão que gera fold-change
+inflado e p-valor artificialmente baixo (o problema técnico que a usuária identificou). Só
+**ECM1** e **BEND3** são bem expressos nas 6 amostras sem nenhum zero. Recomendação: tratar
+os 4 genes esparsos como candidatos a falso positivo técnico até confirmação por qPCR.
+GO Biological Process (offline): nenhum termo significativo no SUI mesmo sem filtro; no POP
+(lista maior) aparecem vários termos significativos de cálcio/músculo liso, mas zero em
+comum com o SUI. KEGG e hub genes desta reanálise dependem de novas exportações do STRING
+(listas em `results/STRING_input_SUI_36h_nofilter_genes.txt` e
+`results/STRING_input_POP_nofilter_genes.txt`) — ainda não fornecidas.
+
 ## Proposta de tema: convergência via sinalização neural (não gene-a-gene)
 
 Cruzar o transcriptoma inteiro gene-a-gene deu uma amostra pequena demais (4-6 genes) para
