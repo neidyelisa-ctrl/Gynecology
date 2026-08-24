@@ -337,3 +337,34 @@ um lipídeo medido por espectrometria de massa em tecido de POP — não é uma 
 hipotética. Limitação registrada: não foi possível acessar a tabela completa dos 44 lipídeos
 específicos do artigo da Zhang (PMC bloqueado neste ambiente) — usuária pode puxar
 diretamente da página aberta do PMC.
+
+## Deep dive por via GO/KEGG (tentativa de pathview + alternativa mecanística)
+
+- `R/analysis_pathview_deep_dive.R` — tenta usar `pathview` para colorir/aprofundar cada via
+  KEGG dos 6 genes; documenta e confirma (via o mesmo teste de rede usado no resto do
+  projeto) que a chamada falha porque `pathview` baixa o KGML da via direto de
+  `rest.kegg.jp` a cada execução — sem modo offline. Erro 403 confirmado no script, mesmo
+  bloqueio de sempre.
+- `results/Deep_dive_vias_6genes.xlsx` — resultado completo (5 abas), com a alternativa: para
+  cada via GO/KEGG dos 6 genes, cruzei a bioquímica primária de cada enzima/proteína com a
+  direção real (log2FC) de expressão de cada gene nos dados validados, para inferir a direção
+  provável do metabólito/lipídeo — mais específico do que o pathview daria (que só colore o
+  nó, sem inferir metabólito), mas é inferência mecanística, não lipidômica medida.
+
+**Achado mais importante**: INPP4B está para baixo nos dois tecidos. Isso tem consequência
+bioquímica específica: INPP4B é supressor tumoral justamente por FREAR a sinalização PI3K/AKT
+(degrada PI(3,4)P2, o segundo mensageiro que ativa AKT). Com INPP4B reduzido, a leitura
+bioquímica direta é que PI3K/AKT tende a ficar MAIS ativa nesse ponto, não simplesmente
+"deficiente" como o rascunho da usuária enquadra atualmente — nuance importante para refinar
+o texto. Direção inferida dos lipídeos específicos: **PI(3,4)P2 tende a acumular** (substrato
+do INPP4B, menos degradado), **PI(3)P tende a cair** (produto, menos produzido); com CWH43
+aumentado, mais troca de âncora GPI de diacilglicerol para **ceramida**.
+
+**Ressalva de curadoria**: das 19 vias KEGG que aparecem, 14 são acionadas por um único gene
+cada (majoritariamente CALML5 sozinho, membro da família calmodulina anotado em dezenas de
+vias genéricas de cálcio sem relação com assoalho pélvico — fototransdução, glioma, secreção
+salivar etc.). Marcadas explicitamente como "não recomendado citar individualmente" na
+planilha — citar cada uma isoladamente seria forçar resultado. As vias que realmente merecem
+destaque no texto da usuária são 5: fosfatidilinositol, epiderme/cornificação, âncora GPI,
+fibrinólise, e nada mais — 2 delas já têm confirmação externa independente (scRNA-seq
+Zhang et al. 2024).
