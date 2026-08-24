@@ -303,3 +303,37 @@ literatura citada e roteiro metodológico proposto para expandir este trabalho.
   neuromuscular, e o SUI 72h também tem um hub neural independente (**L1CAM**, adesão/guia
   axonal) — reforça o eixo neural mesmo dentro desta análise independente, mesmo com o
   tema dominante do 72h migrando para ciclo celular/ECM.
+
+## Datasets adicionais (POP/SUI humanos) + lipídeos exatos das vias
+
+- `results/Datasets_e_lipidios_vias.xlsx` — resultado completo (4 abas).
+
+**Datasets**: GitHub não hospeda dados brutos de RNA-seq/scRNA-seq (isso fica em GEO/SRA/
+ArrayExpress/Zenodo — GitHub normalmente só guarda código); confirmado que não há dataset de
+SUI/POP hospedado lá. Para POP, achei dois datasets humanos de scRNA-seq públicos adicionais
+ao GSE208261: **GSE151202** (Nat Commun 2021, parede vaginal anterior, 81.026 células) e
+**GSE250414** (Commun Biol 2024, ligamento uterossacral, 30.452 células). Para SUI, a
+limitação do GEO que a usuária já tinha identificado se confirmou: só achei um dataset de
+expressão gênica humana de SUI (microarray, Wei et al. 2020, *Reprod Sci* — parede vaginal
+periuretral, sem accession GEO confirmado nos resumos disponíveis) — e confirmei, lendo o
+texto do próprio artigo de Zhang et al. 2024 (o scRNA-seq de SUI que a usuária já usa), que
+os dados brutos **não estão depositados publicamente** ("data will be made available on
+request").
+
+**Lipídeos exatos**: sem acesso ao vivo a KEGG/Reactome/MetaboAnalyst (bloqueados), a
+identificação foi feita indo direto na bioquímica primária de cada enzima/proteína (a mesma
+fonte que o KEGG usa para desenhar o mapa da via). **INPP4B**: substrato PI(3,4)P2 → produto
+PI(3)P (também atua em PI(4,5)P2 e Ins(1,3,4)P3); seu domínio C2 se liga (sem hidrolisar) a
+**PA (ácido fosfatídico)** e PIP3. **CALML5**: não metaboliza lipídeo diretamente — é sensor
+de Ca2+ dois passos depois na via PIP2→(PLC)→IP3/DAG→Ca2+→calmodulina. **CWH43**: remodela a
+âncora GPI trocando a porção lipídica de diacilglicerol para **ceramida** (explica o termo GO
+"GPI anchor biosynthetic process" que já tinha aparecido no enriquecimento).
+
+**Achado mais forte**: o domínio C2 do INPP4B se liga a PA — e PA é exatamente o lipídeo que
+mais mudou na lipidômica real de tecido de POP (Zhang S et al., FASEB J 2025, já citado no
+rascunho da usuária): 0,048%→0,226% da composição lipídica total (~4,7x), a maior mudança
+entre os 44 lipídeos significativos. Ponte mecanística real entre o gene achado por RNA-seq e
+um lipídeo medido por espectrometria de massa em tecido de POP — não é uma inferência
+hipotética. Limitação registrada: não foi possível acessar a tabela completa dos 44 lipídeos
+específicos do artigo da Zhang (PMC bloqueado neste ambiente) — usuária pode puxar
+diretamente da página aberta do PMC.
