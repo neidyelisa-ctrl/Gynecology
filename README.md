@@ -368,3 +368,49 @@ planilha — citar cada uma isoladamente seria forçar resultado. As vias que re
 destaque no texto da usuária são 5: fosfatidilinositol, epiderme/cornificação, âncora GPI,
 fibrinólise, e nada mais — 2 delas já têm confirmação externa independente (scRNA-seq
 Zhang et al. 2024).
+
+## Pipeline COM filtro: DEGs → ortólogos → GO/KEGG → hub genes → GO/KEGG (POP, SUI 72h, SUI 36h)
+
+- `R/analysis_full_pipeline_filtered_orthologs.R` — DEGs (com filtro de baixa contagem,
+  reaproveitando o pipeline principal) → ortólogos via babelgene (1-para-1) → GO e KEGG
+  offline, individualmente para POP, SUI 72h (prioridade) e SUI 36h.
+- `R/analysis_hubgenes_GO_KEGG.R` — GO e KEGG (offline) rodados separadamente sobre os hub
+  genes (não sobre os DEGs) de cada rede STRING já exportada.
+- `results/DEG_HubGenes_GO_KEGG_completo.xlsx` — resultado completo (8 abas).
+
+**Números**: POP 624 DEGs; SUI 72h 58 DEGs no rato → 50 com ortólogo humano 1-para-1; SUI 36h
+110 DEGs no rato → 87 com ortólogo. Hub genes reaproveitados das redes STRING já exportadas
+(POP top 30 de 342 nós; SUI 72h todos os 10 nós; SUI 36h todos os 23 nós) — **ressalva
+importante**: essas redes foram construídas a partir das listas de ortólogos antigas
+(HomoloGene), que só cobrem parcialmente as listas novas (babelgene/Ensembl, maiores) — POP
+337/624, SUI 72h só os 10 genes que já estavam na rede antiga. Listas atualizadas para nova
+exportação do STRING já geradas em `results/STRING_input_*_filtrado_genes.txt`.
+
+**DEGs**: nenhum termo GO/KEGG sobrevive à correção BH em SUI (72h ou 36h); POP tem 8 vias
+KEGG significativas (cálcio/músculo liso/cardíaco/purina, mesmo padrão do KEGG que a usuária
+já tinha exportado do STRING). **Hub genes**: muitos termos "significativos" nas 3 redes, mas
+a maioria é artefato de gene único genérico (PRKACB/CYCS/LEF1 no POP; TLR4 no SUI 36h,
+anotados em dezenas de vias sem relação com assoalho pélvico — mesmo padrão do CALML5 visto
+antes). Achados multi-gene, confiáveis: POP = contração muscular/cálcio/cardíaco (CASQ2, RYR2,
+TPM1, ACTA2); SUI 72h = ciclo celular (CCNB1, CCND2, DLGAP5, UBE2C) + degradação de matriz
+(MMP7, MMP11); SUI 36h = canais iônicos/excitabilidade (EDNRA, SCN5A, SCN7A) + inflamação
+(TLR4, FFAR4, FUT4) — todos batendo com os temas já estabelecidos nas análises anteriores.
+
+## Mendelian randomization dos 6 genes validados — não executável neste ambiente
+
+- `R/mendelian_randomization_6genes.R` — script pronto (TwoSampleMR) para a usuária rodar no
+  próprio ambiente com internet normal; não roda aqui porque a API do IEU OpenGWAS
+  (`gwas.mrcieu.ac.uk`) está bloqueada (mesma política de rede de todo o projeto, confirmado
+  por teste direto).
+- GWAS real encontrado para usar como desfecho de POP: **FinnGen finn-b-N14_FEMGENPROL**
+  (9.092 casos / 68.969 controles) — o mesmo usado no estudo real "Unraveling the Causal
+  Linkages of RBP7 and SCGB3A1 on Pelvic Organ Prolapse" (PMC12765987), mesma metodologia que
+  a usuária quer aplicar aos 6 genes dela.
+- Para SUI: nenhum GWAS dedicado com accession público confirmado ainda — candidato mais
+  promissor é uma meta-análise de 2026 (medRxiv, ainda preprint, >1 milhão de indivíduos, 54
+  loci de incontinência urinária e subtipos).
+- Confirmado: nenhum dos 6 genes (CWH43, INPP4B, CALML5, KRT10, SERPINB2, DMKN) apareceu como
+  achado significativo no único MR proteômico já publicado para POP (EFEMP1/MFAP4, Sci Rep
+  2025) — mas isso não é evidência contra eles, já que aquele estudo mede proteína circulante
+  no sangue (Olink/SomaScan), plataforma que provavelmente não inclui a maioria desses 6 genes
+  (são proteínas estruturais/epidérmicas, não biomarcadores de sangue típicos).
