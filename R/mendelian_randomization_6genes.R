@@ -65,17 +65,42 @@ print(ieugwasr::get_opengwas_jwt())
 print(ieugwasr::user())
 ## -----------------------------------------------------------------------
 
-genes <- c("CWH43", "INPP4B", "CALML5", "KRT10", "SERPINB2", "DMKN")
+## CORRECAO: o dataset "eqtl-a-*" do OpenGWAS usa ID Ensembl do GENE
+## (ENSG...), NAO o simbolo (era esse o erro do "argument is of length
+## zero" - a query com "eqtl-a-CWH43" nao existe, a API devolveu vazio).
+## IDs confirmados localmente via org.Hs.eg.db (Bioconductor, nao inventados):
+gene_ensembl <- c(
+  CWH43    = "ENSG00000109182",
+  INPP4B   = "ENSG00000109452",
+  CALML5   = "ENSG00000178372",
+  KRT10    = "ENSG00000186395",
+  SERPINB2 = "ENSG00000197632",
+  DMKN     = "ENSG00000161249"
+)
+genes <- names(gene_ensembl)
 
-## 1) Exposicao: eQTLs de cada gene (eQTLGen via OpenGWAS, ou substitua pelo
-##    ID do GTEx do tecido que fizer mais sentido - pele para KRT10/DMKN/
-##    CALML5, ou "whole blood" do eQTLGen para todos)
-##    Ex.: ao_agree() e authentication podem ser necessarios - ver
-##    documentacao do pacote ieugwasr/TwoSampleMR.
+## 1) Exposicao: eQTLs de cada gene (eQTLGen via OpenGWAS - catalogo "eqtl-a-",
+##    baseado em sangue). Se algum gene nao tiver instrumento nesse catalogo
+##    (comum para genes de expressao restrita a pele/epiderme, como CALML5/
+##    DMKN/CWH43/KRT10 - o catalogo eqtl-a e majoritariamente de sangue),
+##    considere GTEx v8 pele (nao disponivel via OpenGWAS "eqtl-a", precisa
+##    de outra fonte, ex. GTEx portal diretamente) como alternativa.
+## tryCatch por gene para um ID sem dado no catalogo nao travar o loop todo.
 exposure_list <- lapply(genes, function(g) {
-  extract_instruments(outcomes = paste0("eqtl-a-", g))  # ID ilustrativo -
-  # confirme o ID exato de cada gene no catalogo eQTLGen dentro do
-  # OpenGWAS (plataforma "eQTLGen") antes de rodar de verdade.
+  ensg <- gene_ensembl[[g]]
+  out <- tryCatch(
+    extract_instruments(outcomes = paste0("eqtl-a-", ensg)),
+    error = function(e) {
+      cat(g, "(", ensg, ") - sem instrumentos nesse catalogo eQTL:", conditionMessage(e), "\n")
+      NULL
+    }
+  )
+  if (is.null(out) || nrow(out) == 0) {
+    cat(g, "(", ensg, ") - NENHUM instrumento encontrado no catalogo eqtl-a (sangue).",
+        "Provavel gene de expressao tecido-especifica (pele) nao coberto por esse painel.\n")
+    return(data.frame())
+  }
+  out
 })
 names(exposure_list) <- genes
 
