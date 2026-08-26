@@ -34,6 +34,36 @@ if (!requireNamespace("TwoSampleMR", quietly = TRUE)) {
   remotes::install_github("MRCIEU/TwoSampleMR")  # requer internet
 }
 library(TwoSampleMR)
+library(ieugwasr)
+
+## -----------------------------------------------------------------------
+## AUTENTICACAO (obrigatoria desde 1/maio/2024) - PASSO NOVO que faltava
+## -----------------------------------------------------------------------
+## 1) No navegador, va em https://api.opengwas.io/profile/ e faca login
+##    (Microsoft, GitHub ou e-mail).
+## 2) Nessa mesma pagina de perfil, clique em "Generate new token" (ou
+##    "Manage tokens") e copie o token gerado - e uma string longa, tipo
+##    senha. NAO compartilhe esse token com ninguem.
+## 3) Salve o token no seu arquivo .Renviron (NAO no script, para nao
+##    vazar sem querer se voce compartilhar o codigo). No RStudio, rode:
+##      usethis::edit_r_environ()
+##    (instale o pacote "usethis" se nao tiver: install.packages("usethis"))
+##    Isso abre o arquivo .Renviron. Adicione esta linha (troque pelo seu
+##    token de verdade) e salve:
+##      OPENGWAS_JWT=coloque_aqui_o_token_que_voce_copiou
+##    Feche e REINICIE a sessao do R (Session > Restart R no RStudio) para
+##    o .Renviron ser recarregado.
+## 4) Confirme que funcionou - deve imprimir uma string longa (o token) e
+##    NAO ficar vazio/NULL:
+print(ieugwasr::get_opengwas_jwt())
+## Se aparecer vazio, o .Renviron nao foi lido corretamente - confira se
+## salvou no arquivo certo (rode usethis::edit_r_environ() de novo para
+## abrir o mesmo arquivo) e se reiniciou a sessao do R depois de salvar.
+##
+## 5) Teste rapido de conexao (deve retornar informacoes da sua conta, sem
+##    erro 401):
+print(ieugwasr::user())
+## -----------------------------------------------------------------------
 
 genes <- c("CWH43", "INPP4B", "CALML5", "KRT10", "SERPINB2", "DMKN")
 
