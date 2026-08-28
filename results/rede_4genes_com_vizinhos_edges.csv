@@ -1,0 +1,8 @@
+"from","to","source"
+"BEND3","OCLN","STRING (export da usuaria, rede POP)"
+"ECM1","ITIH3","STRING (export da usuaria, rede POP)"
+"KREMEN1","DKK1","Literatura primaria (PMC5014086, PMC3522622) - complexo ternario DKK1-KREMEN1-LRP6"
+"KREMEN1","LRP6","Literatura primaria (PMC5014086) - complexo ternario DKK1-KREMEN1-LRP6"
+"KREMEN1","LRP5","Literatura primaria (paralogo de LRP6, mesmo mecanismo)"
+"INPP4B","PIK3CA","Literatura primaria (PMC3248162, PMC7136497) - INPP4B regula PI3K/AKT via PI(3,4)P2"
+"INPP4B","AKT1","Literatura primaria (PMC3248162, PMC7136497) - INPP4B regula PI3K/AKT via PI(3,4)P2"

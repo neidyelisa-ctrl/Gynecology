@@ -414,3 +414,31 @@ TPM1, ACTA2); SUI 72h = ciclo celular (CCNB1, CCND2, DLGAP5, UBE2C) + degradaç�
   2025) — mas isso não é evidência contra eles, já que aquele estudo mede proteína circulante
   no sangue (Olink/SomaScan), plataforma que provavelmente não inclui a maioria desses 6 genes
   (são proteínas estruturais/epidérmicas, não biomarcadores de sangue típicos).
+
+## Rede PPI dos 4 genes (filtrado), expressão CALML5/KREMEN1, busca por datasets POP+SUI
+
+- `R/analysis_4genes_hub_network.R` — rede PPI para os 4 genes em comum do pipeline COM
+  filtro (INPP4B, ECM1, BEND3, KREMEN1), combinando arestas já existentes nos exports do
+  STRING da usuária (BEND3-OCLN, ECM1-ITIH3) com vizinhos de 1ª camada da literatura primária
+  para INPP4B (via PI3K/AKT, com PIK3CA/AKT1) e KREMEN1 (complexo com DKK1/LRP5/LRP6, via
+  Wnt) — STRING/BioGRID/UniProt ao vivo bloqueados, mesmo teste de sempre.
+- `results/Rede4genes_Expressao_Datasets.xlsx` — resultado completo (4 abas).
+
+**Achado da rede**: mesmo fortalecendo com vizinhos, os 4 genes continuam formando 4
+"estrelas" separadas, sem nenhuma conexão entre si (nem direta, nem por vizinho comum) — cada
+um pertence a um módulo biológico diferente (KREMEN1=Wnt, INPP4B=PI3K/AKT, ECM1 e BEND3=junção
+epitelial via parceiros distintos). Consistente com o padrão de "convergência de via/tema, não
+de rede física direta" já visto no resto da análise.
+
+**Expressão CALML5/KREMEN1**: Human Protein Atlas bloqueado neste ambiente — não foi possível
+obter os níveis exatos (nTPM/IHC) por tecido. Confirmado que ambos os genes têm página de
+expressão catalogada no HPA para tecidos do aparelho reprodutor feminino (vagina, útero,
+cérvice, tuba, ovário), mas os valores exatos precisam ser conferidos diretamente pela usuária
+em proteinatlas.org (ela tem acesso normal à internet). Contexto de literatura (não HPA)
+fornecido na planilha.
+
+**Datasets POP+SUI**: busca extensa, nenhum dataset público encontrado com estratificação
+POP+SUI vs. POP isolado no mesmo paciente, nem estudo de SUI de novo pós-cirúrgico com dado
+molecular (só clínico/modelos de predição de risco). Confirmado também que o próprio
+GSE208261 da usuária não tem anotação de SUI por amostra nos metadados disponíveis — não dá
+para reaproveitar os dados já baixados para essa comparação específica.

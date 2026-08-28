@@ -1,0 +1,12 @@
+"node","degree","betweenness","no_grupo_original"
+"KREMEN1",3,3,TRUE
+"INPP4B",2,1,TRUE
+"BEND3",1,0,TRUE
+"ECM1",1,0,TRUE
+"OCLN",1,0,FALSE
+"ITIH3",1,0,FALSE
+"DKK1",1,0,FALSE
+"LRP6",1,0,FALSE
+"LRP5",1,0,FALSE
+"PIK3CA",1,0,FALSE
+"AKT1",1,0,FALSE
