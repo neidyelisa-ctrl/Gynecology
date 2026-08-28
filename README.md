@@ -431,11 +431,17 @@ epitelial via parceiros distintos). Consistente com o padrão de "convergência 
 de rede física direta" já visto no resto da análise.
 
 **Expressão CALML5/KREMEN1**: Human Protein Atlas bloqueado neste ambiente — não foi possível
-obter os níveis exatos (nTPM/IHC) por tecido. Confirmado que ambos os genes têm página de
-expressão catalogada no HPA para tecidos do aparelho reprodutor feminino (vagina, útero,
-cérvice, tuba, ovário), mas os valores exatos precisam ser conferidos diretamente pela usuária
-em proteinatlas.org (ela tem acesso normal à internet). Contexto de literatura (não HPA)
-fornecido na planilha.
+obter os níveis exatos (nTPM/IHC) por tecido diretamente. A usuária conferiu ela mesma e
+confirmou por print de tela (28/08/2026): **CALML5** tem expressão real e substancial,
+específica de células epiteliais escamosas (não glandulares), em vagina (proteína Low, RNA
+272,7 nTPM via GTEx) e cérvice (proteína Medium, RNA 198,9 nTPM) — dado agora incorporado na
+planilha. Isso não prova diferença POP/SUI vs. controle (é expressão basal em tecido saudável
+do GTEx), mas resolve a dúvida de fundo sobre a análise do rato: CALML5 não é um gene mal
+expresso nesse tipo de tecido — é real e robusto, o que torna o padrão observado (zero nas 3
+amostras Untreated, valores altos em 2 das 3 Treated) mais compatível com indução biológica
+genuína do que com o gene simplesmente não existir ali. A limitação estatística de n=3 por
+grupo no desenho do rato continua valendo (é questão de poder amostral, não de o gene ser
+real). KREMEN1 ainda não conferido pela usuária.
 
 **Datasets POP+SUI**: busca extensa, nenhum dataset público encontrado com estratificação
 POP+SUI vs. POP isolado no mesmo paciente, nem estudo de SUI de novo pós-cirúrgico com dado
