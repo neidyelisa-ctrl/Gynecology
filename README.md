@@ -508,3 +508,39 @@ PPI dos 4 genes" acima) — mostrou que eles não se conectam nem entre si nem c
 **Ponto 5 (próximos passos)**: modelo de ML, coorte clínica e epigenética anotados como
 próximos passos de médio prazo — o modelo de ML (regressão logística/random forest nos 20
 genes + ROC) é o mais viável de começar já, mesmo sem dado clínico novo.
+
+## SUI humano via literatura (Chen 2006 + Tong 2010) x POP humano real + explicação de GSEA
+
+A usuária pediu para trocar o dado de rato por listas de DEG humanos já publicadas (Chen e
+Tong), já que não há dataset bruto público de SUI humano.
+
+- `R/analysis_SUI_humano_literatura_x_POP.R` — cruza 13 genes candidatos de Chen et al. 2006
+  (*Hum Reprod* 21:22-29, microarray Affymetrix, n=5 pares SUI x continentes, parede vaginal
+  periuretral pré-menopausa, 79 DEGs no artigo original — só 13 confirmados via busca, não a
+  lista completa) + Tong et al. 2010 (*Int Urogynecol J*, GBA) contra o POP real
+  (GSE208261/DESeq2 já calculado). **Correção**: "SKALP/elafin" da literatura de revisão é o
+  gene **PI3** (peptidase inhibitor 3), não SLPI como usado por engano numa entrega anterior
+  — são genes homólogos mas diferentes.
+- `R/GSEA_POP_exemplo.R` — script pronto (clusterProfiler + msigdbr) para a usuária rodar GSEA
+  no POP no próprio ambiente; não roda aqui (download do MSigDB bloqueado, mesma política de
+  rede do resto do projeto).
+- `results/SUI_humano_x_POP_e_GSEA.xlsx` — resultado completo (2 abas).
+
+**Achado**: nenhum dos 13 genes é individualmente significativo no POP real (esperado — efeito
+pequeno, amostra pequena no estudo original). Mas **11 dos 12 genes testáveis mostram a mesma
+direção bruta** relatada na literatura de SUI — teste binomial de sinal: **p=0,0063**,
+estatisticamente improvável por acaso. Evidência agregada real de convergência direcional
+entre SUI e POP nesse painel, mesmo sem nenhum gene individual passar no limiar de
+significância — mais honesto que alegar "genes significativos em comum".
+
+**GSEA explicado**: diferente do ORA (teste hipergeométrico já usado em toda a análise, que
+só olha genes já significativos), GSEA usa TODO o transcriptoma ranqueado por um escore
+contínuo e testa se os genes de uma via se concentram no topo/fundo do ranking — capta efeito
+coordenado pequeno espalhado por muitos genes, sem exigir significância individual.
+**Limitação crítica para o caso da usuária**: GSEA precisa da tabela COMPLETA de todos os
+genes testados com escore contínuo — a usuária TEM isso para o POP (script pronto para
+rodar), mas NÃO tem para o SUI humano (só 13 genes "destaque" extraídos de texto de artigo,
+não a tabela completa dos ~79 DEGs nem do transcriptoma inteiro) — então GSEA no lado do SUI
+não é executável com o que temos, só se ela conseguir o material suplementar completo dos
+artigos originais (recomendado tentar, acesso institucional pode ter isso que a busca não
+indexa).
