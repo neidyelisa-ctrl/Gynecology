@@ -474,3 +474,37 @@ POP+SUI vs. POP isolado no mesmo paciente, nem estudo de SUI de novo pós-cirúr
 molecular (só clínico/modelos de predição de risco). Confirmado também que o próprio
 GSE208261 da usuária não tem anotação de SUI por amostra nos metadados disponíveis — não dá
 para reaproveitar os dados já baixados para essa comparação específica.
+
+## Resposta ao feedback do orientador (5 pontos) — genes candidatos da literatura + limiar afrouxado
+
+- `results/Resposta_feedback_professor.xlsx` — resultado completo (6 abas), cobrindo os 5
+  pontos do feedback do professor da usuária.
+
+**Ponto 1 (mais datasets)**: reconfirmado GSE151202 e GSE250414 para POP; nenhum dataset bruto
+novo para SUI. Como alternativa, levantados DEGs de outros autores via revisão sistemática:
+13 genes nomeados para SUI (SLPI, COL17A1, PKP1, **KRT16** — mesma família do KRT10 da
+usuária, DCN, BGN, BICD2, GRB2, STAT3, APOE, GOSR1, FMOD, GBA) e 7 para POP (HOXA13, MMP9,
+ESR2, COL14A1, COL5A1, COL4A2, CTNNB1).
+
+**Ponto 2 (INPP4B)**: ver seção "CORREÇÃO (feedback do professor)" acima — não é bug, é
+convenção de rótulo de concordância, e afeta todos os 6 genes, não só o INPP4B.
+
+**Ponto 3 (afrouxar limiar)**: `R/analysis_threshold_relaxado_20genes.R` — testado
+sistematicamente FDR<0,05 (5 genes) / FDR<0,10 (20 genes) / FDR<0,20 (76 genes, pouco
+defensável). Escolhido **FDR<0,10** (|log2FC|>0,5 mantido) como o afrouxamento ainda
+estatisticamente defensável — não chega aos 30-50 pedidos, mas é o limite razoável antes de
+perder controle de falsa descoberta real.
+
+**Ponto 4 (GO/KEGG na lista maior)**: rodado nos 20 genes — resultado bem mais rico: GO BP
+com 212 termos significativos (padj<0,05), incluindo **Wnt signaling pathway** (GPC4+KREMEN1)
+e sinalização de TNF/NF-kB/inflamação; KEGG com 16 vias significativas, incluindo
+**Phosphatidylinositol signaling system** (INPP4B, mesmo achado de antes) e **Sphingolipid
+metabolism** (SPHK1). GSEA não é executável aqui (precisa dos gene sets do MSigDB, só via
+download ao vivo, já confirmado bloqueado neste sandbox em tentativa anterior com o pacote
+`msigdbr`) — a abordagem de limiar afrouxado + GO/KEGG offline cobre o mesmo objetivo prático.
+Expansão via rede PPI (vizinhos) já feita antes para os 4 genes originais (ver seção "Rede
+PPI dos 4 genes" acima) — mostrou que eles não se conectam nem entre si nem com vizinhos.
+
+**Ponto 5 (próximos passos)**: modelo de ML, coorte clínica e epigenética anotados como
+próximos passos de médio prazo — o modelo de ML (regressão logística/random forest nos 20
+genes + ROC) é o mais viável de começar já, mesmo sem dado clínico novo.
