@@ -220,6 +220,32 @@ números batem, resultado é 100% reproduzível por um caminho técnico totalmen
 (fonte de ortólogos diferente, ferramenta diferente, calculado do zero). Essa é a validação
 mais forte possível dentro do que este ambiente permite fazer.
 
+### CORREÇÃO (feedback do professor): a "mesma direção" dos 6 genes depende da convenção usada
+
+O professor notou (via INPP4B) uma aparente inversão de direção entre versões da análise.
+Investigado a fundo: o log2FoldChange BRUTO nunca mudou de sinal em nenhuma das 5 variantes
+de pipeline já rodadas — não é bug de processamento. O problema é que usei duas convenções
+diferentes de rotulagem de "concordante/discordante" em scripts diferentes:
+- **Convenção A (sinal bruto — usada pela usuária/Perplexity e nos scripts mais recentes
+  "match confirmado")**: só compara se os dois log2FC têm o mesmo sinal matemático. Por essa
+  convenção, os 6 genes parecem "mesma direção".
+- **Convenção B (ajustada por direção de doença — usada no primeiríssimo script deste
+  projeto, para os 4 genes do pipeline com filtro)**: o contraste do SUI é Treated vs
+  Untreated (negativo = mais alto no Untreated/lesão) e o do POP é POP vs Controle (positivo
+  = mais alto no POP/doença) — referências opostas. Ajustando por isso, **todos os 6 genes
+  ficam "discordantes"**, não só o INPP4B.
+
+**O problema de fundo, mais importante que a convenção**: nenhuma das duas é objetivamente
+"a certa", porque o dataset de SUI não tem grupo controle saudável — só "lesionado sem
+tratamento" (Untreated) vs. "lesionado + hMSC" (Treated), ambos já lesionados. É uma
+comparação de EFEITO DE TRATAMENTO, não de doença-vs-saudável, enquanto o POP é
+doença-vs-saudável de verdade. Comparar "direção" entre os dois exige uma suposição
+interpretativa genuinamente discutível, não um fato objetivo. Ver aba nova
+`CORRECAO_direcao_concordancia` em `results/MATCH_CONFIRMADO_6genes_Ensembl.xlsx` (tabela
+com as duas convenções lado a lado). Recomendação: reportar log2FC/padj de cada gene
+separadamente por dataset, sem alegar "concordância" como fato, e declarar essa limitação
+estrutural do desenho do SUI explicitamente no texto.
+
 ## Proposta de tema: convergência via sinalização neural (não gene-a-gene)
 
 Cruzar o transcriptoma inteiro gene-a-gene deu uma amostra pequena demais (4-6 genes) para
