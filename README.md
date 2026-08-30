@@ -639,3 +639,54 @@ não é possível calcular com um único nó (grau/centralidade não existem par
 Recomendação registrada no Excel: para GO/KEGG/PPI com significado estatístico real, usar os
 35 genes "concordantes em direção" (não interseção estrita, já entregues antes) ou rodar
 GO/KEGG no POP sozinho (117 ou 534 genes).
+
+## Duas fontes novas de SUI (literatura), testadas separadamente contra o POP (GSE53868)
+
+A usuária enviou dois documentos novos e pediu para testar cada um separadamente (não
+combinados) contra o mesmo GSE53868 já processado, seguindo o mesmo rigor de sempre.
+
+- `data/chen2003_90genes.csv` — Chen et al. 2003 (*Am J Obstet Gynecol* 189:89-97), fase
+  PROLIFERATIVA do ciclo menstrual, 5 pares SUI x continentes, array HuGeneFL. 69 de 90 genes
+  da Tabela II curados com símbolo HGNC confiável (43 up / 26 down; 21 excluídos por
+  nomenclatura ambígua de 2003).
+- `data/poelmans_2023_SUI_GWAS_188genes.csv` — Poelmans et al. 2023, material suplementar,
+  Tabela S1: 188 genes candidatos de SUI por GWAS (gene-wide p<0,001 em ≥1 de 4 estudos:
+  Penney et al. 2020, Cartwright et al., HUNT, UK Biobank); 183 extraídos com sucesso do
+  docx (extração via `<w:t>` só, evitando o bloat de citações EndNote em base64).
+- `R/analysis_Chen2003_Poelmans_x_GSE53868.R` — script único com as duas partes claramente
+  separadas, reutilizando `results/GSE53868_limma_completo.csv` já calculado (não roda o
+  limma de novo).
+- `results/Chen2003_Poelmans_x_GSE53868.xlsx` — resultado completo (8 abas).
+
+**Chen 2003 (expressão, tem direção) — mesmo tratamento estatístico do Chen 2006**: 62 de 69
+genes testáveis no GSE53868. Só **1 gene individualmente significativo** (CPA3), e em direção
+OPOSTA (discordante). Concordância de direção no painel inteiro: **35/62 (56%), teste
+binomial p=0,374 — NÃO significativo**. Isso é diferente do Chen 2006 (82% concordante,
+p=2×10⁻⁶) e do Chen 2006×GSE53868 (67%, p=0,0175) — achado NEGATIVO real, reportado com
+honestidade: a lista específica da fase proliferativa não converge com o POP do jeito que a
+lista geral do Chen 2006 converge (pode ser biológico — a fase do ciclo importa — ou pode ser
+ruído de N pequeno; não dá para distinguir com os dados disponíveis). GO/KEGG rodado mesmo
+assim nos 35 genes "concordantes" (abas 2-3), mas com a ressalva de que, como a concordância
+em si não foi estatisticamente significativa, esse subconjunto de 35 não é diferente de uma
+metade aleatória da lista — muitas vias vêm de só 2 genes cada, o que é fácil de ficar
+"significativo" por acaso com listas pequenas.
+
+**Poelmans (GWAS, sem direção) — tratado como busca de gene-candidato, não teste de sinal**:
+não existe "direção" para um p-valor de associação GWAS, então este cruzamento não usa o
+teste binomial — em vez disso, checa quais dos 183 genes GWAS também são DEG no POP. 138/183
+testáveis no array; **5 são também DEG significativo no POP** (padj<0,05, |logFC|>0,5):
+SLC2A14, TNNT3, NANOG, PDE8B, XKR4 — nenhum corroborado em mais de 1 dos 4 estudos GWAS
+(candidatos GWAS mais fracos dentro da própria lista). Dos 12 genes "landscape" da Tabela S2
+(evidência de SUI fora de GWAS: AAT/SERPINA1, BDNF, CDH1, CTNNB1, ESR1, ESR2, GNAI3, ITGA8,
+ITGB1, MMP1, PARP1), nenhum atinge significância formal no POP, mas MMP1 (padj=0,109) e
+ITGB1 (padj=0,164) mostram tendência de subida — hipótese a explorar, não achado confirmado.
+GO/KEGG nos 5 genes de overlap (aba 7) tem a mesma limitação já documentada antes para N muito
+pequeno: cada termo tem Count=1, ou seja, é a anotação já conhecida de cada gene isolado, não
+um enriquecimento estatístico robusto.
+
+**PPI/hub genes**: mesma limitação de sempre (STRING/BioGRID bloqueados neste ambiente).
+Exportados `results/STRING_input_Chen2003_concordantes_GSE53868.txt` (35 genes) e
+`results/STRING_input_Poelmans_overlap_GSE53868.txt` (5 genes) para submissão manual pela
+usuária em string-db.org. Com só 5 genes o Poelmans tende a dar rede esparsa — a rede PPI
+mais robusta continua sendo a dos 35 genes concordantes do Chen 2006 (já validada com
+p<0,05 no teste de concordância).

@@ -1,0 +1,70 @@
+ProbeSet,GeneDescription,GeneSymbol,Direction,pvalue,AvgFoldChange
+M80254,"Peptidylprolyl isomerase F (cyclophilin F)",PPIF,down,0.02358,-3.1
+M62982,"Arachidonate 12-lipoxygenase",ALOX12,down,0.03810,-2.7
+Y10032,"Serum/glucocorticoid regulated kinase",SGK1,down,0.01507,-2.5
+X59770,"Type II interleukin-1 receptor",IL1R2,down,0.00470,-2.5
+U41745,"PDGFA-associated protein 1",PDAP1,down,0.01296,-1.8
+U07806,"Topoisomerase (DNA) I",TOP1,down,0.01933,-1.7
+M84526,"D component of complement (adipsin)",CFD,down,0.02513,-1.6
+D31888,"REST corepressor",RCOR1,down,0.00620,-1.6
+U40714,"Tyrosyl-tRNA synthetase",YARS1,down,0.03315,-1.6
+L76465,"Hydroxyprostaglandin dehydrogenase 15-(NAD)",HPGD,down,0.03121,-1.6
+M91669,"Collagen, type XVII, alpha1",COL17A1,down,0.03198,-1.6
+M86400,"Tyrosine 3-monooxygenase/tryptophan 5-monooxygenase activation protein zeta",YWHAZ,down,0.01924,-1.6
+M86752,"Stress-induced phosphoprotein 1",STIP1,down,0.02802,-1.6
+U88964,"Interferon-stimulated gene (20kd)",ISG20,down,0.03022,-1.5
+AB002382,"Catenin (cadherin-associated protein) delta1",CTNND1,down,0.03999,-1.5
+D64109,"Transducer of ERBB2, 2",TOB2,down,0.02597,-1.5
+U28386,"Karyopherin alpha2",KPNA2,down,0.02849,-1.5
+D13748,"Eukaryotic translation initiation factor 4A, isoform 1",EIF4A1,down,0.02928,-1.5
+L34155,"Laminin, alpha3",LAMA3,down,0.02492,-1.5
+X52882,"T-complex 1",TCP1,down,0.03222,-1.4
+X03484,"v-raf-1 murine leukemia viral oncogene homolog 1",RAF1,down,0.04554,-1.4
+M34344,"Human platelet glycoprotein IIb",ITGA2B,down,0.04948,-1.4
+U16660,"Enoyl coenzyme A hydratase 1, peroxisomal",ECH1,down,0.01058,-1.4
+X74801,"Chaperonin-containing TCP1, subunit 3 (gamma)",CCT3,down,0.00586,-1.3
+X94754,"Methionine-tRNA synthetase",MARS1,down,0.04345,-1.3
+D10522,"Myristoylated alanine-rich protein kinase C substrate",MARCKS,down,0.04773,-1.2
+U21128,"Lumican",LUM,up,0.01996,2.7
+J02874,"Fatty acid-binding protein 4, adipocyte",FABP4,up,0.01939,2.4
+D42108,"Phospholipase C-like 1",PLCL1,up,0.01651,2.3
+Z11793,"Selenoprotein P, plasma, 1",SELENOP,up,0.00971,2.2
+U60060,"Fasciculation and elongation protein zeta1 (zygin I)",FEZ1,up,0.02152,2.2
+Z18956,"Solute carrier family 6 member 6 (taurine transporter)",SLC6A6,up,0.01329,1.9
+M73720,"Mast cell carboxypeptidase A",CPA3,up,0.03110,1.9
+U49957,"LIM domain containing preferred translocation partner in lipoma",LPP,up,0.01070,1.9
+U37139,"Integrin beta3 binding protein (beta3-endonexin)",ITGB3BP,up,0.00499,1.8
+J03241,"Transforming growth factor-beta3",TGFB3,up,0.01629,1.7
+HG2810-HT2921,"Decorin, Alt splice 1",DCN,up,0.04932,1.7
+U84011,"Amylo-1,6-glucosidase",AGL,up,0.00089,1.6
+L19161,"Eukaryotic translation initiation factor 2, subunit 3 gamma",EIF2S3,up,0.03920,1.6
+D00726,"Ferrochelatase",FECH,up,0.01191,1.6
+U94586,"NADH dehydrogenase (ubiquinone) 1a subcomplex 4",NDUFA4,up,0.01031,1.5
+U68018,"MAD, mothers against decapentaplegic homolog 2",SMAD2,up,0.02684,1.5
+L77730,"A3 adenosine receptor",ADORA3,up,0.01527,1.5
+HG3431-HT3616,"Hepatocyte growth factor receptor",MET,up,0.00112,1.5
+X61970,"Proteasome subunit, alpha type 5",PSMA5,up,0.00477,1.5
+D64142,"H1 histone family, member X",H1-10,up,0.00173,1.5
+M15353,"Eukaryotic translation initiation factor 4E",EIF4E,up,0.00707,1.5
+U11791,"Cyclin H",CCNH,up,0.03968,1.5
+U72511,"Repressor of estrogen receptor activity",PHB2,up,0.04686,1.4
+U76010,"Solute carrier family 30 member 3 (zinc transporter)",SLC30A3,up,0.00433,1.4
+M36284,"Glycophorin C",GYPC,up,0.01483,1.4
+L38951,"Karyopherin (importin) beta1",KPNB1,up,0.01715,1.4
+M22490,"Bone morphogenetic protein 4",BMP4,up,0.01092,1.4
+D26068,"Williams-Beuren syndrome chromosome region 1",EIF4H,up,0.00153,1.4
+X82895,"Membrane protein, palmitoylated 2 (MAGUK p55 subfamily member 2)",MPP2,up,0.03267,1.4
+U60061,"Fasciculation and elongation protein zeta2 (zygin II)",FEZ2,up,0.04455,1.4
+L32832,"AT-binding transcription factor 1",ZFHX3,up,0.00036,1.4
+M28713,"NADH-cytochrome b5 reductase (b5R)",CYB5R3,up,0.04908,1.4
+M96803,"Spectrin, beta, nonerythrocytic 1",SPTBN1,up,0.03801,1.4
+X57206,"Inositol 1,4,5-trisphosphate 3-kinase B",ITPKB,up,0.04203,1.4
+U56417,"1-Acylglycerol-3-phosphate O-acyltransferase 1",AGPAT1,up,0.01957,1.4
+S81419,"Dystrophin",DMD,up,0.00547,1.3
+D28476,"Thyroid hormone receptor interactor 12",TRIP12,up,0.03613,1.3
+U97105,"Dihydropyrimidinase-like 2",DPYSL2,up,0.03771,1.3
+U90915,"Cytochrome c oxidase subunit IV isoform 1",COX4I1,up,0.02579,1.3
+U37022,"Cyclin-dependent kinase 4",CDK4,up,0.03325,1.3
+X80763,"5-HT2c receptor",HTR2C,up,0.04036,1.3
+U18300,"Damage-specific DNA binding protein 2 (48kd)",DDB2,up,0.01998,1.3
+U68105,"Poly(A)-binding protein",PABPC1,up,0.03264,1.3
