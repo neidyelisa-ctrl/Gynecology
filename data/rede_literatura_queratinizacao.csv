@@ -1,0 +1,10 @@
+Gene1,Gene2,TipoDeConexao,Evidencia
+TP63,KRT14,Regulatoria (fator de transcricao -> alvo),TP63 e o principal regulador transcricional da diferenciacao epidermica e ativa diretamente genes de queratina basais como KRT14 (Mills et al. 1999 Nature; revisado em Truong and Khavari 2007; Candi et al.)
+TP63,KRT16,Regulatoria (via programa de ativacao epidermica),TP63 controla o programa de diferenciacao/ativacao epidermica do qual KRT16 faz parte (queratina de resposta a ferida/hiperproliferacao)
+TP63,KRT17,Regulatoria (via programa de ativacao epidermica),Mesmo programa transcricional de TP63 controlando KRT16
+KRT16,KRT17,Co-regulacao funcional,"KRT16 e KRT17 sao co-induzidas no mesmo programa de queratinas de ativacao/hiperproliferacao (parceiras funcionais de KRT6, ausente desta lista) classicamente descrito em ferida e psoriase (Leigh et al. 1995, citado no proprio Chen 2006)"
+PKP1,KRT14,Complexo estrutural (desmossomo),PKP1 (plakofilina 1) ancora filamentos de queratina nos desmossomos; mutacoes em PKP1 causam sindrome de fragilidade cutanea por falha nessa ancoragem (Hatzfeld; Kowalczyk - revisoes de biologia estrutural)
+PKP1,KRT16,Complexo estrutural (desmossomo),Mesma funcao estrutural de ancoragem de PKP1 aos filamentos de queratina
+PKP1,KRT17,Complexo estrutural (desmossomo),Mesma funcao estrutural de ancoragem de PKP1 aos filamentos de queratina
+COL17A1,KRT14,Complexo estrutural (hemidesmossomo),"COL17A1 (colageno XVII) ancora os filamentos de KRT14 na membrana basal via hemidesmossomos, com plectina como intermediario - biologia estrutural bem estabelecida"
+S100A7,S100A2,Co-regulacao funcional,Ambos S100A7 (psoriasina) e S100A2 sao induzidos no mesmo programa de ativacao/diferenciacao epidermica de queratinocitos

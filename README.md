@@ -723,3 +723,45 @@ concordância 35/52 (67,3%), binom p=0,0175 — segue sendo o resultado mais for
 **Passo 2 (vias)**: 15 GO e 4 KEGG em comum — maioria genérica (mesma ressalva), mas aparece
 de novo "positive regulation of keratinocyte proliferation" (via TP63) — mais uma confirmação
 independente (a sétima) do eixo de queratinização central deste projeto.
+
+## Chen 2006 x POP (RNA-seq e microarray) — confirmação, explicação do teste e PPI/hub genes
+
+A usuária pediu para confirmar o cruzamento Chen 2006 x GSE53868 (microarray) no mesmo
+formato do RNA-seq (GSE208261), explicar o teste binomial, avaliar se a técnica de cruzar
+DEG publicado por outros autores é cientificamente aceitável, e tentar PPI/hub genes para os
+dois conjuntos de genes concordantes SEPARADAMENTE.
+
+- `R/analysis_PPI_hubgenes_Chen2006_RNAseq_microarray.R` — reaproveita a rede STRING real já
+  baixada (`results/STRING_network_POP.tsv`, do GSE208261) para checar conexões entre os
+  genes concordantes de cada dataset, sem inventar nenhuma aresta nova.
+- `data/rede_literatura_queratinizacao.csv` — rede complementar curada da literatura
+  (TP63→KRT14/16/17, PKP1-queratinas via desmossomo, COL17A1-KRT14 via hemidesmossomo,
+  S100A7/S100A2 co-regulados), com a evidência de cada conexão documentada.
+- `results/PPI_HubGenes_Chen2006_RNAseq_e_Microarray.xlsx` — resultado completo (4 abas).
+
+**Confirmação dos dois cruzamentos**: RNA-seq (GSE208261) x Chen 2006 — 5 genes significativos
+(PRKCB, SGCA, DPP3, NME1, MCM4), 45/55 concordantes (82%), p=2,057×10⁻⁶. Microarray (GSE53868)
+x Chen 2006 — 2 genes significativos (SERPINB8, KRT17), 35/52 concordantes (67,3%), p=0,0175.
+POP confirmado em dois datasets independentes, mesma direção biológica.
+
+**Teste binomial (explicado no Excel)**: testa se a % de concordância de direção observada é
+diferente de 50% (nível de acaso, como jogar uma moeda) — vantagem de não depender de
+magnitude de fold-change comparável entre plataformas diferentes.
+
+**Viabilidade da técnica (vote-counting/teste de sinal)**: confirmado via busca que é um
+método reconhecido na literatura de meta-análise de expressão gênica (comparações formais de
+métodos em Oxford Bioinformatics 2008; frameworks de RNA-seq multi-estudo em BMC
+Bioinformatics 2014) — é o método mais simples da família (métodos como combinação de
+p-valores têm mais poder, mas exigem escalas comparáveis, o que não é o caso aqui). Para
+SUI/POP especificamente, já existem revisões publicadas compilando candidatos de múltiplos
+estudos (PubMed 33002951) e combinando evidência humana+animal (PMC8949972) — mesmo espírito
+metodológico.
+
+**PPI/hub genes**: nenhuma aresta DIRETA entre os genes concordantes na rede STRING real já
+baixada, em nenhum dos dois conjuntos — mas achamos 1 conexão INDIRETA real: MCM4 e NME1
+compartilham o vizinho PAICS (via de purinas) em ambos os datasets. Exportados
+`results/STRING_input_Chen2006_concordantes_RNAseq_GSE208261.txt` e
+`..._Microarray_GSE53868.txt` para submissão manual da usuária no STRING completo. Como
+complemento, a rede de literatura da queratinização aponta TP63/KRT14/KRT16/KRT17 como os
+hubs funcionais mais defensáveis do projeto inteiro — não por uma rede PPI formal aqui, mas
+por aparecerem de forma consistente em toda análise independente já feita.
