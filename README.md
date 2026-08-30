@@ -578,3 +578,36 @@ contraction (ADORA2B/NPR1/**PRKCB**) e cell cycle (CDKN1C/MAD2L1/**MCM4**) — P
 uterossacral/redondo, 8×9). Não consigo baixar (NCBI bloqueado) — se a usuária baixar a série
 matrix normalizada de qualquer um e enviar, roda-se `limma` (padrão para microarray) e
 cruza-se com Chen 2006 também, para ter POP em dois datasets independentes.
+
+## GSE53868 (POP, microarray, série matrix enviada pela usuária) x Chen 2006
+
+A usuária baixou e enviou a série matrix do GSE53868 (já normalizada, símbolos de gene como
+ID_REF — não precisou de anotação de plataforma separada).
+
+- `data/GSE53868_series_matrix.txt` — dados brutos (24 amostras: 12 mulheres com POP,
+  biópsia PAREADA por paciente — sítio do prolapso vs. sítio sem prolapso na mesma pessoa).
+- `R/analysis_GSE53868_limma_x_Chen2006.R` — `limma` com bloco por paciente (desenho
+  pareado), cruzamento com os 58 genes do Chen 2006, GO/KEGG offline.
+- `results/GSE53868_x_Chen2006_completo.xlsx` — resultado completo (7 abas).
+
+**Números, sem ambiguidade** (ver pergunta 4 da usuária): **2 genes individualmente
+significativos** no GSE53868 entre os candidatos do Chen 2006 (SERPINB8, KRT17, ambos
+concordantes) — diferente de **35 de 52 genes testáveis (67%) concordantes em direção**
+(usado só para o teste de sinal: p=0,0175). São duas contagens diferentes, não o mesmo número.
+Nenhuma sobreposição tripla (gene significativo nos DOIS datasets de POP E no Chen 2006).
+
+**Confirmação de direção** (checagem explícita contra o erro da vez anterior): os três
+datasets (Chen 2006 SUI-vs-continente, GSE208261 POP-vs-controle, GSE53868
+sítio-POP-vs-sítio-sem-POP mesma paciente) têm a MESMA orientação — positivo sempre = "para
+cima no lado afetado/doente". Sem a ambiguidade do desenho do rato (Treated-vs-Untreated sem
+grupo saudável de referência).
+
+**GO/KEGG**: GSE53868 sozinho — 78 termos GO (de 1.840) e 8 vias KEGG (de 108), incluindo
+assinatura de genes de resposta imediata/estresse (EGR2/EGR3/FOSL1/FOSL2/JUND/NR4A1-3) e
+metalotioneínas (MT1A/B/G/H/X, MT2A) — achado novo, não visto antes. Nos 35 genes
+concordantes Chen×GSE53868 — 222 termos GO e 37 vias KEGG, dominados de novo pelo eixo de
+**queratinização** (keratinocyte differentiation, intermediate filament organization,
+epidermis development via KRT14/KRT16/KRT17/S100A7/COL17A1) — **quinta confirmação
+independente** desse eixo (rato SUI, 6 genes, Chen 2006 sozinho, GSE208261, agora GSE53868).
+Ressalva: só 4 das 37 vias KEGG têm mais de 1 gene batendo — as outras 33 são ruído de gene
+único (mesmo padrão do CALML5 já documentado antes).
