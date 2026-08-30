@@ -806,3 +806,33 @@ continuity with the rest of this README.
   p=2×10⁻⁶ RNA-seq / p=0,018 microarray) — convergência de vias nomeadas é um critério mais
   rigoroso (baseline de ~300 vias KEGG vs ~20 mil genes) e mais difícil de bater mesmo quando a
   biologia subjacente realmente se sobrepõe.
+
+### Follow-up: expandindo para 60 genes + GO/KEGG direto nos genes concordantes (microarray)
+
+A usuária perguntou se realmente não há vias compartilhadas mesmo usando GO/KEGG (não só
+GSEA) para o microarray, pedindo para usar os "79 genes" do Chen 2006. Duas coisas feitas,
+ambas somadas ao mesmo arquivo em inglês (`GSEA_POP_vs_Chen2006_convergent_pathways.xlsx`):
+
+1. **Expandi a lista**: revisei os 21 genes excluídos originalmente e consegui mapear mais 2
+   com confiança — **LRRC32** ("T-cell activation leucine repeat-rich protein", nome antigo de
+   LRRC32/GARP) e **LARGE1** ("like-glycosyltransferase", descrição histórica exata do gene
+   LARGE). `data/chen2006_79genes.csv` agora tem 60 genes (34 up/26 down). Os outros 19
+   continuam genuinamente impossíveis de mapear sem consulta a banco de dados ao vivo
+   (indisponível aqui) — não inventei símbolos para eles.
+2. **Achei e corrigi o MESMO bug de universo também nos "genes concordantes"**: o script
+   `analysis_GSE53868_limma_x_Chen2006.R` também usava `keys(org.Hs.eg.db, keytype="SYMBOL")`
+   (191.076, errado) para o GO/KEGG dos 36 genes concordantes Chen×GSE53868 — reportando
+   **37 de 37 vias KEGG "significativas" (100%!)**, o mesmo padrão suspeito de antes. Corrigido
+   usando o universo real do array GSE53868 (31.072 genes,
+   `results/GO_BP_Chen_x_GSE53868_concordantes_CORRECTED.csv` /
+   `KEGG_..._CORRECTED.csv`): **GO BP 118 de 243 vias significativas** (ainda dominado por
+   keratinização — intermediate filament bundle assembly, intermediate filament organization,
+   keratinocyte differentiation, epidermis development), **KEGG agora 0 de 37** (era 37/37 com
+   o bug).
+
+**Resposta final e honesta**: sim, GO acha convergência real e específica de queratinização
+quando testado nos genes que realmente se sobrepõem — esse sinal é real e sobrevive a toda
+correção tentada (painel sozinho, genes concordantes, 58 ou 60 genes). KEGG não acha nada
+significativo em nenhuma versão testada — não porque a biologia discorda, mas porque as vias
+KEGG são maiores/mais genéricas e precisam de mais genes-hit do que um painel de 36-60 genes
+consegue fornecer.
