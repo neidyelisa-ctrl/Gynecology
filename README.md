@@ -611,3 +611,31 @@ epidermis development via KRT14/KRT16/KRT17/S100A7/COL17A1) — **quinta confirm
 independente** desse eixo (rato SUI, 6 genes, Chen 2006 sozinho, GSE208261, agora GSE53868).
 Ressalva: só 4 das 37 vias KEGG têm mais de 1 gene batendo — as outras 33 são ruído de gene
 único (mesmo padrão do CALML5 já documentado antes).
+
+## Pipeline direto: DEG(POP) ∩ DEG(SUI) → GO/KEGG → PPI/hub genes (a pedido da usuária)
+
+A usuária pediu para refazer de forma mais simples e direta: interseção estrita de genes
+(cada lado com seu próprio critério de significância), não o teste de concordância de sinal
+usado antes.
+
+- `R/analysis_POP_SUI_common_genes_GO_KEGG.R` — script único, do início ao fim: DEG de POP
+  (GSE53868, limma pareado) → DEG de SUI (Chen 2006) → interseção → GO/KEGG → tentativa de
+  PPI/hub genes. Testa primeiro |log2FC|>1/FDR<0,05; cai para |log2FC|>0,5/FDR<0,05 se poucos
+  genes em comum, como pedido.
+- `results/POP_x_SUI_interseccao_estrita.xlsx` — resultado completo (4 abas).
+
+**Resultado honesto**: com |log2FC|>1: POP=117 DEGs, SUI=12 genes, **1 gene em comum**
+(KRT17). Afrouxando para |log2FC|>0,5: POP=534 DEGs, SUI=39 genes, **ainda só 1 gene em
+comum** (KRT17) — afrouxar não mudou o resultado aqui. Isso é matematicamente esperado, não
+é erro: a lista de SUI (Chen 2006) tem só 79 genes candidatos no total, contra o transcriptoma
+inteiro do POP (~31 mil genes) — interseção estrita de um conjunto pequeno e fixo contra um
+scan completo do genoma tende a dar poucos genes. KRT17 é coerente com o resto: sexta
+confirmação independente do eixo de queratinização.
+
+**GO/KEGG e PPI/hub genes com 1 gene só**: GO rodou mas não é um teste estatístico de
+verdade com n=1 (só lista as anotações já conhecidas do KRT17 — keratinization, hair follicle
+morphogenesis, intermediate filament organization); KEGG não achou via nenhuma; PPI/hub genes
+não é possível calcular com um único nó (grau/centralidade não existem para 1 gene).
+Recomendação registrada no Excel: para GO/KEGG/PPI com significado estatístico real, usar os
+35 genes "concordantes em direção" (não interseção estrita, já entregues antes) ou rodar
+GO/KEGG no POP sozinho (117 ou 534 genes).
