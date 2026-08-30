@@ -690,3 +690,36 @@ Exportados `results/STRING_input_Chen2003_concordantes_GSE53868.txt` (35 genes) 
 usuária em string-db.org. Com só 5 genes o Poelmans tende a dar rede esparsa — a rede PPI
 mais robusta continua sendo a dos 35 genes concordantes do Chen 2006 (já validada com
 p<0,05 no teste de concordância).
+
+## Tong et al. 2010 (nova) e Chen 2006 (re-teste) x GSE53868 — genes, depois vias
+
+A usuária pediu, para cada artigo: primeiro cruzar genes em comum/concordância de direção;
+se isso não for muito promissor, comparar a nível de VIAS (GO/KEGG rodado separadamente em
+cada lista, procurando termos em comum mesmo sem sobreposição de genes).
+
+- `data/tong2010_75genes.csv` — Tong, Lang & Zhu (2010) *Int Urogynecol J* 21:1545-1551,
+  ÚNICO artigo de SUI usado no projeto com mulheres PÓS-menopausa (3 pares, array U133 Plus
+  2.0). 66 genes únicos curados da Tabela 2 (24 up / 42 down).
+- Conferido: o PDF que a usuária chamou de "chen2005_DEG.pdf" é o MESMO artigo do Chen et
+  al. 2006 (Hum Reprod 21:22-29) já usado antes — não é fonte nova. Foi re-testado com o
+  mesmo formato de 2 passos, reaproveitando os resultados já calculados.
+- `R/analysis_Tong2010_Chen2006_x_GSE53868_genes_e_vias.R` — script único com as duas
+  partes e os dois passos por parte.
+- `results/Tong2010_Chen2006_x_GSE53868_genes_e_vias.xlsx` — resultado completo (6 abas).
+
+**Tong 2010 — passo 1 (genes), resultado misto/não promissor**: 2 genes individualmente
+significativos no POP (ZC3H12A, COMP — ambos concordantes), mas a concordância de direção no
+painel INTEIRO foi 31/63 = 49,2%, binom p=1 — exatamente nível de acaso, diferente do Chen
+2006 (67%, p=0,018). **Passo 2 (vias)**: 19 termos GO em comum entre o painel Tong2010 e o
+GSE53868, mas ZERO vias KEGG em comum — e os 19 GO são todos termos genéricos de alto nível
+("signal transduction", "regulation of transcription by RNA polymerase II") que duas listas
+quaisquer de tamanho razoável tendem a compartilhar, não uma via específica coerente.
+**Conclusão**: Tong 2010 (pós-menopausa) não mostra convergência forte com o POP nem em
+genes nem em vias — achado negativo real, registrado com honestidade (pode ser biológico —
+grupo etário diferente dos outros artigos — ou N pequeno do próprio estudo, 3 pares).
+
+**Chen 2006 — passo 1 (já confirmado antes)**: 2 genes significativos (SERPINB8, KRT17),
+concordância 35/52 (67,3%), binom p=0,0175 — segue sendo o resultado mais forte do projeto.
+**Passo 2 (vias)**: 15 GO e 4 KEGG em comum — maioria genérica (mesma ressalva), mas aparece
+de novo "positive regulation of keratinocyte proliferation" (via TP63) — mais uma confirmação
+independente (a sétima) do eixo de queratinização central deste projeto.
