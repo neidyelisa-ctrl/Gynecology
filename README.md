@@ -765,3 +765,44 @@ compartilham o vizinho PAICS (via de purinas) em ambos os datasets. Exportados
 complemento, a rede de literatura da queratinização aponta TP63/KRT14/KRT16/KRT17 como os
 hubs funcionais mais defensáveis do projeto inteiro — não por uma rede PPI formal aqui, mas
 por aparecerem de forma consistente em toda análise independente já feita.
+
+## GSEA (POP x SUI) and a universe-size bug found and corrected (English deliverable)
+
+Full details in `results/GSEA_POP_vs_Chen2006_convergent_pathways.xlsx` (in English, per the
+user's request) and the two scripts below — this section summarizes both in Portuguese for
+continuity with the rest of this README.
+
+- `R/analysis_GSEA_POP_vs_Chen2006_convergent_pathways.R` — GSEA pré-ranqueada real
+  (implementada do zero em R, sem pacotes — CRAN/Bioconductor/MSigDB inacessíveis aqui),
+  usando o t-estatístico pareado do GSE53868 (31.013 genes) e vias KEGG do org.Hs.eg.db.
+  Permutação de FENÓTIPO (sign-flip pareado, 500 permutações) — corrigida a partir de uma
+  primeira versão que usava permutação de rótulo de gene set (mais simples, mas conhecida por
+  inflar falsos positivos por não respeitar a correlação real entre genes de uma via —
+  documentado no próprio Subramanian et al. 2005).
+- **BUG ENCONTRADO E CORRIGIDO**: toda análise "painel sozinho" desta sessão (Chen 2006, Chen
+  2003, Poelmans, Tong 2010) usava `keys(org.Hs.eg.db, keytype="SYMBOL")` como universo de
+  fundo — que nesta versão do pacote retorna 191.076 símbolos (catálogo completo do Entrez
+  Gene, incluindo pseudogenes/loci não caracterizados), não os ~5.868 genes com anotação KEGG
+  real ou ~18.870 com anotação GO real. Isso inflava artificialmente a significância. Corrigido
+  em `R/analysis_CORRECTED_universe_standalone_panels.R`, que re-roda os 4 painéis com universo
+  correto.
+- **Resultado da correção**: os números de "vias em comum" reportados antes (19 GO para Tong
+  2010 x POP; 15 GO + 4 KEGG para Chen 2006 x POP) caem para 0, 1 e 0 respectivamente com o
+  universo correto — essas alegações amplas de convergência genérica estavam infladas e devem
+  ser tratadas como inválidas.
+- **A boa notícia**: o achado central do projeto (eixo de queratinização) SOBREVIVE à
+  correção — o painel Chen 2006 sozinho, com universo correto, ainda mostra "keratinocyte
+  differentiation" (KRT14/KRT16/S100A7/TP63), "establishment of skin barrier"
+  (KRT16/TP63/CLDN1) e "intermediate filament bundle assembly" (KRT14/PKP1) significativos
+  (FDR<0,05) — não é artefato do bug, é um sinal real que passou por um teste mais rigoroso.
+- **GSEA do POP (KEGG)**: 75 de 218 vias significativas (FDR<0,05), 94 a FDR<0,25 — mas com
+  ressalva de que muitas vias empatam no piso de p-valor alcançável com 500 permutações
+  (0,001996 = 1/501), então essas classificações mais extremas não podem ser refinadas sem mais
+  permutações. Plausível dado que o GSE53868 compara tecido do sítio de POP vs sítio sem POP
+  NA MESMA paciente — uma diferença ampla de remodelação tecidual pode legitimamente afetar
+  muitas vias ao mesmo tempo.
+- **Vias convergentes (POP GSEA x Chen 2006 ORA)**: **zero** — achado negativo real. Não
+  contradiz a convergência forte já encontrada a nível de genes (teste de sinal binomial,
+  p=2×10⁻⁶ RNA-seq / p=0,018 microarray) — convergência de vias nomeadas é um critério mais
+  rigoroso (baseline de ~300 vias KEGG vs ~20 mil genes) e mais difícil de bater mesmo quando a
+  biologia subjacente realmente se sobrepõe.
