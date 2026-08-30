@@ -544,3 +544,37 @@ não a tabela completa dos ~79 DEGs nem do transcriptoma inteiro) — então GSE
 não é executável com o que temos, só se ela conseguir o material suplementar completo dos
 artigos originais (recomendado tentar, acesso institucional pode ter isso que a busca não
 indexa).
+
+## Chen et al. 2006 completo (79 DEGs, PDF fornecido pela usuária) x POP real + novo dataset de POP
+
+A usuária conseguiu e enviou o PDF original do Chen et al. 2006 com as Tabelas II/III
+completas (79 DEGs), resolvendo a limitação anterior de só ter os 13 genes citados em
+literatura de revisão.
+
+- `data/chen2006_79genes.csv` — tabela extraída do PDF e curada: das 79 linhas, 58 mapeadas
+  com confiança para símbolo HGNC atual (33 up, 25 down); ~21 excluídas por serem entradas
+  ambíguas do microarray de 2005 sem símbolo atual seguro ("hypothetical protein FLJxxxxx",
+  "KIAAxxxx protein", "Zinc finger protein" genérico, etc.).
+- `R/analysis_Chen2006_79genes_x_POP.R` — cruza os 58 genes com o POP real
+  (GSE208261/DESeq2).
+- `results/Chen2006_completo_x_POP.xlsx` — resultado completo (5 abas).
+
+**Resultado muito mais forte que antes**: **5 genes batem significância individual no POP**
+(padj<0,05, |log2FC|>0,5), todos na mesma direção do Chen 2006: PRKCB (down/down), SGCA
+(down/down), DPP3 (up/up), NME1 (up/up), MCM4 (up/up). E **45 dos 55 genes testáveis (82%)**
+mostram a mesma direção bruta entre SUI (Chen 2006) e POP real — teste binomial de sinal:
+**p=2,057×10⁻⁶** (muito mais forte que o p=0,0063 anterior com só 12 genes).
+
+**GO/KEGG nos 58 genes de Chen 2006** (independente do POP) confirma pela QUARTA vez, com
+método totalmente diferente, o eixo de queratinização/diferenciação epitelial: keratinocyte
+differentiation (KRT14/KRT16/S100A7/TP63), establishment of skin barrier (KRT16/TP63/CLDN1),
+intermediate filament organization (KRT14/KRT16/KRT17). KEGG: vascular smooth muscle
+contraction (ADORA2B/NPR1/**PRKCB**) e cell cycle (CDKN1C/MAD2L1/**MCM4**) — PRKCB e MCM4 são
+2 dos 5 genes já significativos no POP.
+
+**Mais um dataset de POP em microarray** (pedido da usuária): achados 3 reais no GEO —
+**GSE53868** (parede vaginal anterior, 12 pares, RECOMENDADO — mesmo tipo de tecido do Chen
+2006), GSE28660 (ligamento uterossacral, recorrente+primário+controle) e GSE12852 (ligamento
+uterossacral/redondo, 8×9). Não consigo baixar (NCBI bloqueado) — se a usuária baixar a série
+matrix normalizada de qualquer um e enviar, roda-se `limma` (padrão para microarray) e
+cruza-se com Chen 2006 também, para ter POP em dois datasets independentes.
