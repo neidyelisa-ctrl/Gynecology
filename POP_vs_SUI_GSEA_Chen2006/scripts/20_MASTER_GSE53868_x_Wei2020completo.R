@@ -189,8 +189,9 @@ for (j in seq_along(testable)) {
   }
   nes_w[j] <- es_obs_w[j] / base
 }
+leading_edge_w <- sapply(testable, function(idx) paste(head(ranked_genes_w[idx], 30), collapse = "/"))
 wei_gsea <- data.frame(PATH = names(testable), Nh = sapply(testable, length),
-                        ES = es_obs_w, NES = nes_w, pvalue = pval_w)
+                        ES = es_obs_w, NES = nes_w, pvalue = pval_w, leadingEdge = leading_edge_w)
 wei_gsea$p.adjust <- p.adjust(wei_gsea$pvalue, "BH")
 wei_gsea <- wei_gsea[order(wei_gsea$pvalue), ]
 write.csv(wei_gsea, "results/GSEA_preranked_Wei2020full_KEGG.csv", row.names = FALSE)
