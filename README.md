@@ -836,3 +836,31 @@ correção tentada (painel sozinho, genes concordantes, 58 ou 60 genes). KEGG n�
 significativo em nenhuma versão testada — não porque a biologia discorda, mas porque as vias
 KEGG são maiores/mais genéricas e precisam de mais genes-hit do que um painel de 36-60 genes
 consegue fornecer.
+
+## GSEA preranked nos 3 artigos de literatura x POP (a pedido explícito da usuária)
+
+A usuária pediu explicitamente: DEGs de POP (|log2FC|>1, FDR<0,05) → GSEA nesses genes; e o
+MESMO GSEA preranked nos 3 artigos (Chen 2003, Chen 2006, Tong 2010), usando a tabela de
+p-valor/fold-change de cada um como métrica de ranking, já que não há dataset bruto para eles.
+
+- `R/analysis_GSEA_preranked_3papers_vs_POP.R` — script único, com nota metodológica extensa
+  no cabeçalho explicando por que aplicar GSEA a uma lista de 60-90 genes (não o transcriptoma
+  completo do artigo original) é um uso não-padrão do método: só vias KEGG com ≥2 membros
+  presentes na lista pequena são testáveis (16-47 de 229, vs 218 para o POP inteiro), e sem
+  matriz bruta por amostra dos artigos, a permutação usada é de rótulo de gene set (mais
+  liberal que a permutação de fenótipo usada no POP) — mesmo fallback que o próprio
+  GSEA-Preranked usa quando não há matriz bruta disponível.
+- **POP**: 117 DEGs (|log2FC|>1, FDR<0,05); GSEA real (fenótipo, já calculada antes, reaproveitada):
+  75 de 218 vias KEGG significativas a FDR<0,05.
+- **Chen 2003**: 0 vias significativas (FDR<0,25) — consistente com o achado negativo já visto
+  antes para este artigo por outros métodos.
+- **Chen 2006**: 5 vias significativas a FDR<0,25 (0 a FDR<0,05) — nenhuma temática de
+  queratinização (viés esperado com só 2-3 genes por via testável).
+- **Tong 2010**: 0 vias significativas.
+- **Vias compartilhadas com o POP: ZERO para os 3 artigos** — nenhuma via KEGG bate
+  significativa nos dois lados simultaneamente, em nenhum dos 3. Consistente com os outros
+  métodos já testados (ORA painel-vs-painel, ORA nos genes concordantes) — mesma conclusão por
+  três caminhos independentes: sem via KEGG nomeada compartilhada, mas a convergência a nível
+  de gene individual (teste de sinal binomial) e a nível de GO (mais granular que KEGG)
+  continuam sendo a evidência mais forte e reprodutível do projeto.
+- `results/GSEA_preranked_3papers_vs_POP.xlsx` — deliverable completo em inglês (6 abas).
