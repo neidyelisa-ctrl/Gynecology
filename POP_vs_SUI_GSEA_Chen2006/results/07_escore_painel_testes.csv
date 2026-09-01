@@ -1,0 +1,4 @@
+"metodo","estatistica","pvalue"
+"t pareado (1 amostra)",1.671,0.122879035364518
+"Wilcoxon signed-rank",61,0.0922851562500001
+"Permutacao de fenotipo (10000x)",NA,0.104889511048895

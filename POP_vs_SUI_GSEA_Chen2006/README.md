@@ -37,6 +37,8 @@ resto do repositório.
 | `scripts/03_GSEA_preranked_Chen2006.R` | GSEA preranked nos 59 genes do Chen 2006 (ranking = sinal×-log10(p)), vias KEGG, permutação de rótulo de gene set (1000 permutações) | `results/GSEA_preranked_Chen2006_KEGG.csv` |
 | `scripts/04_shared_pathways.R` | Compara os dois resultados de GSEA, reporta vias com o mesmo ID de via KEGG significativo nos dois lados | `results/GSEA_shared_KEGG_FDR025.csv` / `FDR005.csv` (ou `_VAZIO.txt` se nenhuma) |
 | `scripts/05_OPCIONAL_upgrade_msigdbr_fgsea.R` | **Rode no seu computador**, com internet normal — versão com `fgsea`+`msigdbr` (MSigDB completo: Hallmark+KEGG+Reactome, nomes de via legíveis) | `results/fgsea_*` |
+| `scripts/06_cruzamento_DEG_GO_KEGG.R` | A abordagem original (antes do conselho do professor): cruza DEG(POP) com a lista do Chen 2006, ORA (GO/KEGG) nos genes em comum/concordantes | `results/06_*` |
+| `scripts/07_score_painel_queratinizacao.R` | Escore de painel (6 genes do eixo de queratinização) testado diretamente nas 12 pacientes do POP — a proposta de validação "sem forçar" | `results/07_*` |
 
 Pré-requisitos (scripts 1-4, já resolvidos neste ambiente via `apt`, mas
 seguem os nomes padrão do Bioconductor para quem for rodar em outro lugar):
@@ -142,6 +144,71 @@ isso é esperado dado o tamanho do painel do Chen 2006, não uma ausência
 real de convergência biológica. A nível de gene individual e de GO
 (critérios mais sensíveis para uma lista curta), a convergência SUI-POP é
 real, robusta e tematicamente específica (queratinização), não genérica.
+
+### 5) Cruzamento DEG(POP) x DEG(Chen2006) e GO/KEGG (script 06) — a abordagem original
+
+Esta é a abordagem que você estava seguindo antes do conselho do professor
+(cruzar DEG das duas doenças, olhar genes em comum, rodar GO/KEGG), rodada
+aqui de forma independente e completa:
+
+- **Interseção estrita** (DEG no POP com |log2FC|>1 & FDR<0,05 **E** na lista
+  do Chen 2006): **1 gene** — `KRT17`. De menos de 2 genes não dá para rodar
+  GO/KEGG como teste estatístico (precisa de ≥2 genes na mesma via para
+  calcular sobreposição).
+- **Genes concordantes em direção** (sem exigir significância individual no
+  POP — só que a direção bata): **36 de 53 genes testáveis (68%)** — teste
+  binomial de sinal, **p = 0,0127**.
+- **GO Biological Process nos 36 genes concordantes** (universo correto = os
+  31.072 genes do array, não o catálogo Entrez inteiro): **118 de 243 termos
+  significativos (FDR<0,05)**, os 6 primeiros todos do mesmo eixo:
+  *intermediate filament bundle assembly* (KRT14/PKP1), *intermediate
+  filament organization* (KRT17/KRT14/KRT16), *keratinocyte differentiation*
+  (KRT14/KRT16/S100A7), *epidermis development* (KRT14/S100A7/COL17A1),
+  *hair cycle* (KRT14/KRT16), *epithelial cell differentiation*
+  (KRT17/KRT14/KRT16).
+- **KEGG nos mesmos 36 genes**: **0 de 37 vias significativas** — mesmo
+  padrão negativo do GSEA (KEGG é mais genérico/menos granular que GO,
+  precisa de mais genes por via para detectar sinal).
+
+### 6) Escore do painel de queratinização nas 12 pacientes do POP (script 07) — proposta de validação sem forçar
+
+Os 6 genes que aparecem nos 6 termos GO mais significativos acima (KRT14,
+KRT16, KRT17, PKP1, S100A7, COL17A1 — todos medidos e concordantes no
+GSE53868; TP63 aparece no Chen 2006 mas não foi medido neste array) formam
+um painel definido **a priori**, a partir de evidência externa (GO + Zhang
+et al. 2024), não garimpado nos dados do POP. Testar esse painel específico
+diretamente nas 12 pacientes é uma confirmação dirigida por hipótese — mais
+apropriada para 6 genes do que competir contra o universo inteiro do
+GO/KEGG.
+
+**Método**: para cada paciente, diferença pareada (sítio do prolapso menos
+sítio sem prolapso) dos 6 genes, cada gene escalado pelo seu próprio desvio-
+padrão entre as 12 pacientes (sem centralizar — ver nota de bug corrigido no
+cabeçalho do script), escore = média dos 6 valores escalados.
+
+- **9 de 12 pacientes têm escore positivo** (para cima no sítio do
+  prolapso); 3 negativo. Escore médio = 0,417.
+- Teste t pareado (1 amostra): **p = 0,123**.
+- Wilcoxon signed-rank: **p = 0,092**.
+- Permutação de fenótipo (sign-flip, 10.000 permutações): **p = 0,105**.
+
+**Leitura honesta**: os três testes concordam entre si (nenhum contradiz os
+outros) e todos apontam na direção esperada (escore positivo, mesmo sentido
+do Chen 2006), mas **nenhum cruza o limiar convencional de p<0,05** — é uma
+tendência real, não um resultado definitivo. Com n=12 pacientes, um painel
+de 6 genes não tem muito poder estatístico sozinho. Isto NÃO invalida o
+achado de queratinização (que já tem 3 linhas de evidência independentes:
+concordância de sinal p=0,013, GO enrichment FDR<0,05, e o estudo publicado
+de Zhang et al. 2024) — mostra que testar diretamente nas pacientes
+individuais, com um teste mais rigoroso e um n pequeno, é mais exigente do
+que os testes agregados acima. Reporte os dois lados na tese: convergência
+agregada real e estatisticamente significativa (genes + GO), tendência (não
+significativa) ao nível de paciente individual.
+
+**Gráfico**: `results/07_escore_painel_boxplot.png` — painel esquerdo mostra
+a distribuição do escore nas 12 pacientes; painel direito mostra os 6 genes
+individualmente por paciente (dá para ver que `S100A7` tem a maior amplitude
+de variação, e que a paciente 4 é uma "outlier" que puxa a média).
 
 ## Limitações deste ambiente (leia antes de levar os números para a tese)
 
