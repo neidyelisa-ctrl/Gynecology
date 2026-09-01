@@ -893,3 +893,49 @@ Tong 2010 — essa rota tem muito mais poder estatístico que a GSEA preranked n
   Tong 2010: só 1 de 16 vias significativas (SNARE), sem sobreposição com o POP. Chen 2006:
   continua 0/37, sem sobreposição.
 - `results/KEGG_concordant_genes_3papers_vs_POP.xlsx` — deliverable completo em inglês.
+
+## GSEA real (RNA-seq) no par original POP x SUI (o achado dos "4 genes")
+
+Seguindo sugestão do professor (repassada pela usuária): já que POP (GSE208261) e SUI
+(GSE149072, 36h) só têm 4 genes em comum diretamente, rodei GSEA separadamente em cada um
+— esses são os ÚNICOS dois datasets do projeto com transcriptoma completo E dados brutos por
+amostra reais dos dois lados, então essa é a GSEA mais rigorosa do projeto inteiro (permutação
+de fenótipo real nos dois lados, não a permutação de rótulo de gene set mais fraca usada nos
+painéis de literatura).
+
+- `R/analysis_GSEA_POP_vs_SUI36h_real_RNAseq.R` — script único.
+- **POP**: 218 vias testadas, 89 significativas a FDR<0,05 (114 a FDR<0,25).
+- **SUI 36h**: 214 testadas, 103 significativas a FDR<0,05 (110 a FDR<0,25).
+- **Compartilhadas**: 48 vias.
+- **Ressalva 1 (piso de p-valor)**: com 500 permutações, muitas vias empatam no p-valor mínimo
+  possível (1/501≈0,002) — não dá pra refinar o ranking além disso sem mais permutações.
+- **Ressalva 2 (amplitude)**: ~40-48% de TODAS as vias KEGG testadas vieram significativas em
+  CADA dataset — amplo demais pra refletir 89 ou 103 mecanismos independentes; sugere que as
+  duas comparações (POP vs Controle; SUI Tratado vs Não-tratado) envolvem mudanças
+  transcricionais amplas e sistêmicas, então a sobreposição de 48 é parcialmente esperada por
+  essa amplitude, não 48 achados mecanísticos independentes.
+- **O achado mais importante — a interpretação de direção INVERTE quais vias "concordam"**:
+  SUI não tem controle saudável verdadeiro — só uretra lesionada-sem-tratamento (mais perto de
+  "doença") vs lesionada-tratada-com-hMSC (recuperação). O contraste usado (Tratado vs
+  Não-tratado) NÃO é do mesmo tipo que o do POP (POP vs Controle) — é a MESMA ambiguidade que
+  causou a preocupação original do professor com a "inversão do INPP4B", agora em nível de via.
+  Sob concordância BRUTA de sinal: 43 de 48 vias "concordam". Sob interpretação AJUSTADA PARA
+  DOENÇA (invertendo o sinal do SUI, já que Tratado=recuperação): só 5 concordam — e são
+  DIFERENTES das 43. TODAS as 8 vias mecanisticamente específicas e relevantes para tecido
+  conjuntivo (TGF-beta, moléculas de adesão celular, tight junction, gap junction,
+  complemento/coagulação, contração de músculo liso vascular, sinalização de cálcio, ErbB)
+  caem no grupo de concordância BRUTA — ou seja, sob a interpretação ajustada para doença,
+  TODAS elas apontam em direções OPOSTAS entre POP e SUI. As 5 que concordam sob a
+  interpretação ajustada são vias metabólicas genéricas (via das pentoses, metabolismo de
+  frutose/manose, biossíntese de esteroides, biossíntese de âncora GPI, fosforilação
+  oxidativa), sem relevância temática específica para tecido conjuntivo pélvico.
+- **Conclusão honesta**: as vias biologicamente mais interessantes (ECM/junções/TGF-beta) SÃO
+  significativas e se sobrepõem entre POP e SUI — mas só sob uma convenção de sinal que não
+  corresponde a "mesma direção na doença". Sob a convenção que realmente responde "essa via
+  muda do mesmo jeito nas duas doenças", nenhuma via mecanisticamente específica concorda; só
+  metabolismo genérico concorda. Isso não significa que POP e SUI não têm relação — pode
+  significar que o modelo de lesão/recuperação do SUI e o modelo doença-vs-saúde do POP estão
+  captando fases ou aspectos diferentes do remodelamento do tecido conjuntivo (lesão aguda vs
+  enfraquecimento estrutural crônico) — um ponto de discussão legítimo para a tese, não uma
+  falha em achar convergência.
+- `results/GSEA_POP_vs_SUI36h_real_RNAseq.xlsx` — deliverable completo em inglês (5 abas).
