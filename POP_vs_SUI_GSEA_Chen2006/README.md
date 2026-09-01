@@ -47,6 +47,10 @@ resto do repositório.
 | `scripts/13_GSEA_preranked_Wei2020.R` | Versão INICIAL (top-40) — SUPERADA pelo script 15 | `results/GSEA_preranked_Wei2020_KEGG.csv` |
 | `scripts/14_cruzamento_DEG_Wei2020full_GO_KEGG.R` | **Versão DEFINITIVA**: mesmo processo dos scripts 06/08/12, agora com a Tabela Suplementar S2 COMPLETA do Wei 2020 (6.118 genes reais, com p-valor) | `results/14_*` |
 | `scripts/15_GSEA_preranked_Wei2020full.R` | **Versão DEFINITIVA**: GSEA preranked no painel completo (ranking = sinal×-log10(p), p-valor real por gene) | `results/GSEA_preranked_Wei2020full_KEGG.csv` |
+| `scripts/16_DEG_GSE12852_limma.R` | DEG do SEGUNDO dataset de POP (GSE12852, Applied Biosystems) — limma + `duplicateCorrelation`, com diagnóstico por tecido (round vs. uterossacral) | `results/GSE12852_*` |
+| `scripts/17_GSEA_classic_GSE12852_uterosacral_KEGG.R` | GSEA clássico (permutação de fenótipo) no GSE12852, ligamento uterossacral | `results/GSEA_classic_GSE12852_uterosacral_KEGG.csv` |
+| `scripts/18_cruzamento_GSE12852_x_Wei2020full.R` | Cruza GSE12852 com o painel completo do Wei 2020 (mesmo processo do script 14) | `results/18_*` |
+| `scripts/19_GSE12852_validacao_cruzada.R` | Validação: GSE12852 x GSE53868 concordam entre si? + GSEA GSE12852 x Wei2020 | `results/19_*` |
 
 Pré-requisitos (scripts 1-4, já resolvidos neste ambiente via `apt`, mas
 seguem os nomes padrão do Bioconductor para quem for rodar em outro lugar):
@@ -460,6 +464,93 @@ agora com o suporte estatístico mais robusto de todos. **Recomendação para
 a tese**: reporte os dois achados lado a lado (discordância ampla + TGF-beta
 concordante e robusto dentro do subconjunto que concorda) em vez de
 escolher um e ignorar o outro — os dois são reais e ambos informativos.
+
+### 12) SEGUNDO dataset de POP: GSE12852 (scripts 16-19) — independente do GSE53868
+
+A usuária forneceu um segundo dataset de POP do GEO, **GSE12852** — "Gene
+expression profile in pelvic organ prolapse" — 8 mulheres com POP vs. 9
+controles (caso-controle, **não pareado por paciente** como o GSE53868),
+ligamento uterossacral + ligamento redondo (2 tecidos/paciente, 34
+arrays), plataforma Applied Biosystems Human Genome Survey Microarray V2.0
+(GPL2986). Diferente do GSE53868 (Agilent, símbolos de gene diretos), esta
+plataforma usa IDs de sonda numéricos — a anotação (`data/GPL2986_annotation.tsv`,
+sonda→símbolo) foi extraída da tabela de plataforma dentro do arquivo SOFT
+completo da série (`GSE12852_family.soft`, fornecido pela usuária, já que
+a página da plataforma no GEO está bloqueada neste ambiente).
+
+**Diagnóstico importante ANTES de aceitar qualquer número** (script 16): a
+análise combinando os dois tecidos (limma + `duplicateCorrelation`, bloco
+por paciente) deu um sinal quase nulo — **FDR mínimo entre 16.752 genes =
+0,97**. Investigando por tecido separado: o **ligamento redondo** não tem
+sinal acima do esperado por acaso (371 genes com p bruto<0,05, MENOS que os
+838 esperados por acaso) e estava diluindo a análise combinada; o
+**ligamento uterossacral** tem sinal real, ainda que modesto (914 vs. 838
+esperados, FDR mínimo 0,22) — biologicamente plausível, é a estrutura mais
+diretamente implicada na fisiopatologia do POP. **A partir daqui, uterossacral
+sozinho (17 amostras, 8 POP x 9 controle, desenho não-pareado simples) é a
+análise de referência** para este dataset — não a combinada.
+
+**DEGs (uterossacral, |log2FC|>1, FDR<0,05): 0 de 16.752 genes.** Nenhum
+gene sobrevive ao corte formal — dataset pequeno e heterogêneo (idades
+24-70, várias etnias, pré e pós-menopausa misturadas). Os genes com menor
+p-valor bruto são biologicamente plausíveis e batem com a conclusão do
+próprio artigo original ("Immunity and Defense" + remodelação de ECM):
+`MYH3, TREM1, CTHRC1, THBS1, TAC1, ANGPTL5` (`results/GSE12852_uterosacral_limma_completo.csv`).
+
+**GSEA clássico (KEGG, permutação de fenótipo, script 17)**: **0 de 213
+vias significativas, mesmo a FDR<0,25** — consistente com a ausência de
+DEGs individuais; dataset pequeno demais para poder estatístico de via.
+
+**Cruzamento com Wei 2020 completo (script 18) — resultado forte e
+inesperado**: **60,0% de concordância de direção (2.339 de 3.900 genes
+testáveis)**, teste binomial **p = 9,2×10⁻³⁶** — extremamente
+significativo, e desta vez CONCORDANTE (ao contrário do GSE53868 x Wei2020,
+que foi significativamente DISCORDANTE, 46,2%, seção 11). GO/KEGG nos 2.339
+genes concordantes: 34 de 5.428 termos GO e **40 de 222 vias KEGG**
+significativas — mas aqui é preciso ler com cuidado: as vias KEGG do topo
+são majoritariamente **categorias genéricas de grandes módulos** (Ribosome,
+Metabolic pathways, Oxidative phosphorylation, e as "doenças" que
+tradicionalmente carregam os mesmos genes de OXPHOS/ribossomo por
+artefato de anotação — Parkinson, Alzheimer, Huntington-like) — o mesmo
+padrão de "via genérica" já visto e descontado várias vezes neste projeto.
+Os termos GO/KEGG mais especificamente interessantes, com menos risco de
+serem artefato: *antigen processing and presentation of exogenous peptide
+antigen via MHC class II* (16 genes), *positive regulation of T cell
+activation*, *phagosome* (KEGG 04145), *lysosome* (KEGG 04142) — um tema de
+**resposta imune/apresentação de antígeno**, coerente com a conclusão do
+próprio artigo do GSE12852 ("Immunity and Defense... independent of
+inflammatory infiltrates").
+
+**Checagem de validação essencial (script 19) — leia antes de confiar no
+achado acima**: os DOIS datasets de POP concordam entre si?
+**GSE12852 (uterossacral) x GSE53868: só 51,8% de concordância (7.020 de
+13.543 genes)** — estatisticamente diferente de 50% (p=2×10⁻⁵, a amostra é
+grande), mas o efeito é **muito fraco** (quase empate), bem mais fraco que
+a concordância de qualquer um dos dois com o Wei2020. **Isto é uma
+informação importante para a interpretação**: os dois datasets de POP,
+apesar de medirem a mesma doença, não concordam fortemente entre si
+(plataformas diferentes — Agilent vs. Applied Biosystems —, tecidos
+diferentes — parede vaginal vs. ligamentos uterossacral/redondo —,
+desenhos diferentes — pareado vs. caso-controle). Isso não invalida os
+achados anteriores, mas é motivo real de cautela: **um "achado" que só
+aparece com um dos dois POPs (como a discordância com o Wei2020 no
+GSE53868, ou a concordância forte no GSE12852) pode refletir a
+especificidade daquele dataset/tecido, não POP em geral** — recomendação:
+tratar tanto a concordância do GSE12852 quanto a discordância do GSE53868
+como achados específicos de cada dataset, discutidos lado a lado na tese,
+não escolher um como "o resultado do POP".
+
+**GSEA: GSE12852 x Wei2020 — 0 vias compartilhadas** (o GSE12852 não teve
+nenhuma via significativa no GSEA para comparar — ver acima).
+
+**Resumo desta seção**: o GSE12852 é um dataset mais fraco/ruidoso que o
+GSE53868 a nível de gene individual e de via (esperado — menor, mais
+heterogêneo, plataforma mais antiga, tecido diferente e parcialmente sem
+sinal como o redondo). Mesmo assim, rendeu o teste de concordância de
+direção mais forte do projeto inteiro contra o Wei2020 (p=9×10⁻³⁶) — mas a
+checagem de validação cruzada (GSE12852 x GSE53868, só 51,8%) mostra que
+esse resultado é específico deste par de datasets, não uma confirmação
+universal de "POP concorda com SUI". Reporte com essa nuance.
 
 ## Limitações deste ambiente (leia antes de levar os números para a tese)
 
