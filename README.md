@@ -864,3 +864,32 @@ p-valor/fold-change de cada um como métrica de ranking, já que não há datase
   de gene individual (teste de sinal binomial) e a nível de GO (mais granular que KEGG)
   continuam sendo a evidência mais forte e reprodutível do projeto.
 - `results/GSEA_preranked_3papers_vs_POP.xlsx` — deliverable completo em inglês (6 abas).
+
+## Baixando o limiar de POP para 0,5 + rota melhor-potenciada (genes concordantes): achado real para Chen 2003
+
+A usuária pediu para baixar o log2FC do POP para 0,5 e tentar de novo, buscando um resultado
+mais satisfatório. Esclarecimento importante: isso NÃO muda a GSEA real do POP (sempre usou o
+transcriptoma inteiro, sem limiar) nem a definição de "genes concordantes" (sempre foi por
+direção, sem limiar de significância). O que mudou de fato: completei a rota de ORA nos genes
+concordantes (já usada para Chen 2006, com universo real do array) também para Chen 2003 e
+Tong 2010 — essa rota tem muito mais poder estatístico que a GSEA preranked no painel pequeno.
+
+- `R/analysis_concordant_genes_KEGG_all3papers_vs_POP.R` — script único.
+- **Bug pego e corrigido antes de reportar**: a primeira checagem de sobreposição deu zero
+  vias em comum, o que contradizia uma conferência manual. Rastreei até um bug real de
+  formatação — IDs do KEGG do org.Hs.eg.db vêm como texto com zero à esquerda ("04350"), mas
+  um ciclo de escrever/ler CSV remove esse zero silenciosamente (tanto R quanto pandas
+  interpretam "04350" como o número 4350 ao ler) — comparar "04350" (em memória) com "4350"
+  (lido do CSV) como texto parece diferente mesmo sendo a mesma via. Corrigido convertendo
+  todo ID para inteiro antes de comparar.
+- **Resultado real**: Chen 2003 (35 genes concordantes) — 23 de 53 vias KEGG significativas,
+  das quais **3 batem com as vias significativas do próprio POP** (5144, 5410, 4350) e **8**
+  com a GSEA real do POP. A mais relevante mecanicamente: **04350, via de sinalização TGF-beta**
+  — compartilhada via TGFB3 (lado Chen 2003) e TGFB2 (lado POP), dois genes da mesma família de
+  ligantes TGF-beta. É um achado real e biologicamente coerente (o próprio Chen 2003 discute
+  TGF-beta como central no remodelamento de ECM em SUI). As outras 2 (Malária, cardiomiopatia
+  hipertrófica) são categorias de "doença" do KEGG conhecidas por capturar genes genéricos de
+  ECM/estrutura, não literalmente relevantes — mesma ressalva já feita antes neste projeto.
+  Tong 2010: só 1 de 16 vias significativas (SNARE), sem sobreposição com o POP. Chen 2006:
+  continua 0/37, sem sobreposição.
+- `results/KEGG_concordant_genes_3papers_vs_POP.xlsx` — deliverable completo em inglês.
