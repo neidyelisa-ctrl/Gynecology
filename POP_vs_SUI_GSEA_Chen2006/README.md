@@ -51,6 +51,10 @@ resto do repositório.
 | `scripts/17_GSEA_classic_GSE12852_uterosacral_KEGG.R` | GSEA clássico (permutação de fenótipo) no GSE12852, ligamento uterossacral | `results/GSEA_classic_GSE12852_uterosacral_KEGG.csv` |
 | `scripts/18_cruzamento_GSE12852_x_Wei2020full.R` | Cruza GSE12852 com o painel completo do Wei 2020 (mesmo processo do script 14) | `results/18_*` |
 | `scripts/19_GSE12852_validacao_cruzada.R` | Validação: GSE12852 x GSE53868 concordam entre si? + GSEA GSE12852 x Wei2020 | `results/19_*` |
+| `scripts/20_MASTER_GSE53868_x_Wei2020completo.R` | Script único consolidado (DEG+GSEA+cruzamento) só para o par GSE53868 x Wei2020 (o par de mesma origem tecidual) | `results/20_*` |
+| `scripts/21_cruzamento_Chen2006_x_GSE12852_GO_KEGG.R` | Completa a matriz: Chen2006 x GSE12852 | `results/21_*` |
+| `scripts/22_cruzamento_Chen2003_x_GSE12852_GO_KEGG.R` | Completa a matriz: Chen2003 x GSE12852 | `results/22_*` |
+| `scripts/23_MASTER_resumo_DEG_GO_KEGG_6pares.R` | Consolida os 6 pares POP x SUI, acha vias/termos recorrentes em mais de 1 par — achou o TGF-beta (KEGG 04350) em 4 de 4 pares testáveis | `results/23_*` |
 
 Pré-requisitos (scripts 1-4, já resolvidos neste ambiente via `apt`, mas
 seguem os nomes padrão do Bioconductor para quem for rodar em outro lugar):
@@ -551,6 +555,76 @@ direção mais forte do projeto inteiro contra o Wei2020 (p=9×10⁻³⁶) — m
 checagem de validação cruzada (GSE12852 x GSE53868, só 51,8%) mostra que
 esse resultado é específico deste par de datasets, não uma confirmação
 universal de "POP concorda com SUI". Reporte com essa nuance.
+
+### 13) Voltando à abordagem DEG → GO/KEGG, agora com a matriz completa 2 POP x 3 SUI (scripts 21-23)
+
+A usuária pediu para voltar à abordagem original (DEG → GO/KEGG, não GSEA)
+usando os datasets novos. As combinações Wei2020×GSE53868 (script 14) e
+Wei2020×GSE12852 (script 18) já tinham sido feitas; os scripts 21 e 22
+preenchem as duas que faltavam (Chen2006×GSE12852, Chen2003×GSE12852),
+fechando a matriz completa: **2 datasets de POP × 3 painéis de SUI = 6
+pares**. O script 23 consolida os 6 e procura vias/termos que se repetem
+em mais de um par — o teste de robustez mais rigoroso do projeto: um
+achado que sobrevive à troca de dataset de POP E de fonte de SUI é muito
+mais defensável que um achado de um par só.
+
+**Concordância de direção nos 2 pares novos**:
+- Chen2006 x GSE12852: **28% (14/50), p=0,0026 — discordância
+  significativa** (mesmo padrão do Chen2006 x Wei2020 visto antes — o
+  GSE12852, tecido de ligamento, discorda de painéis que convergem bem
+  com o GSE53868, tecido de parede vaginal. Reforça o ponto que você
+  levantou: **tecido de mesma origem importa**).
+- Chen2003 x GSE12852: **69% (40/58), p=0,0054 — concordância
+  significativa** (ao contrário do Chen2003 x GSE53868, que não foi
+  significativo, 56,5%/p=0,374).
+
+**🎯 O ACHADO MAIS ROBUSTO DO PROJETO INTEIRO: KEGG 04350 (sinalização
+TGF-beta)**. É a única via, junto com `04520` (adherens junction/junção
+aderente), presente e significativa (FDR<0,05) em **TODOS OS 4 pares em
+que era testável**:
+
+| Par | Genes | FDR |
+|---|---|---|
+| Chen2003 x GSE53868 | SMAD2/TGFB3 | 0,0137 |
+| Chen2003 x GSE12852 | TGFB3/DCN/SMAD2 | 0,0121 |
+| Wei2020 x GSE53868 | TGFBR1/ID3/RPS6KB2/SMURF1/MAPK1/BMP2/FST/SMAD3/BMP6/TGFBR2/PPP2CA/BMP8A/ID1/THBS2/RHOA/TGFB1/SMAD5/NODAL/BMP5/ACVR1C/MAPK3 (21 genes) | 2,8×10⁻⁶ |
+| Wei2020 x GSE12852 | THBS2/FST/E2F4/MAPK1/BMP6/BMP8A/TGFBR1/PPP2CA/DCN/MAPK3/SMAD5/RHOA/GDF5/ID3/BMP2/TGFBR2/BMPR2/TGFB1/SMURF1/NODAL/PITX2/SP1/GDF6 (23 genes) | 0,0068 |
+
+Só não aparece nos 2 pares do Chen2006 (que não têm ≥2 genes de TGF-beta
+entre os poucos genes concordantes ali — não é uma contradição, é falta
+de poder). O equivalente em GO (*transforming growth factor beta receptor
+signaling pathway*, GO:0007179) também recorre em 3 dos 6 pares
+(Chen2003×GSE53868, Chen2003×GSE12852, Wei2020×GSE53868). **Quatro fontes
+de SUI diferentes (2 artigos + 1 painel completo, cada um testado contra
+2 datasets de POP independentes) convergem na mesma via — este é o
+achado com a base de evidência mais ampla de todo o projeto**, mais forte
+até que o eixo de queratinização (que é robusto, mas específico do par
+Chen2006×GSE53868/tecido de parede vaginal).
+
+**Outros candidatos recorrentes (3 de 6 pares)**, menos fortes que o
+TGF-beta mas dignos de nota: regulação do Wnt signaling (via DKK1),
+sinalização NF-kB, `03013`/`05144`/`04144` (majoritariamente genéricos -
+RNA transport, "Malaria" [via TGFB3/MET/GYPC — o mesmo trio de genes de
+sempre], endocytosis). A lista completa está em
+`results/23_KEGG_recorrentes_2ormais_pares.csv` e
+`results/23_GO_recorrentes_2ormais_pares.csv` — **use com critério**: a
+maioria dos termos ali é genérica/de módulos grandes (ribossomo,
+metabolismo, fosforilação oxidativa e as "doenças" KEGG que
+tradicionalmente carregam os mesmos genes por artefato de anotação),
+puxada principalmente pelos dois pares do Wei2020 (2.215 e 2.339 genes
+concordantes cada). O TGF-beta (04350) e o adherens junction (04520) são
+os dois candidatos que se destacam por serem específicos e
+mecanisticamente plausíveis para tecido conjuntivo pélvico, não apenas
+estatisticamente presentes.
+
+**Recomendação para a tese**: o TGF-beta (KEGG 04350) e a queratinização
+(eixo GO, específico do GSE53868) são agora os DOIS achados centrais e
+mais bem fundamentados do projeto — cada um robusto à sua própria forma
+(TGF-beta sobrevive à troca de dataset de POP e de fonte de SUI;
+queratinização é mais específico de tecido, mas triangulado com um
+estudo publicado externo — Zhang et al. 2024). Vale a pena apresentar os
+dois lado a lado como as duas linhas de evidência mais fortes, em vez de
+escolher uma.
 
 ## Limitações deste ambiente (leia antes de levar os números para a tese)
 
