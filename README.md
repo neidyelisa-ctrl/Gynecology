@@ -894,6 +894,24 @@ Tong 2010 — essa rota tem muito mais poder estatístico que a GSEA preranked n
   continua 0/37, sem sobreposição.
 - `results/KEGG_concordant_genes_3papers_vs_POP.xlsx` — deliverable completo em inglês.
 
+### Follow-up: checagem de direção (aplicando a lição do RNA-seq aos dados corretos)
+
+A usuária esclareceu que o conselho do professor (GSEA separado + vias compartilhadas) era
+para ser aplicado ao POP microarray + artigos, não ao par original de RNA-seq. A GSEA nesse
+par já tinha sido feita (seções acima); o que faltava era aplicar a MESMA checagem de direção
+que a análise de RNA-seq revelou ser essencial, aqui também.
+
+**Boa notícia**: ao contrário do par RNA-seq (SUI = Tratado-vs-Não-tratado, recuperação, não
+doença), aqui os dois lados são comparações limpas doença-vs-mais-saudável: Chen 2003 (SUI vs
+continentes) e POP GSE53868 (sítio de POP vs sítio sem POP, mesma paciente). Conferi os 13
+genes por trás das 3 vias KEGG compartilhadas (aba `Direction_check_TGFbeta`) — **13 de 13
+apontam na mesma direção (para cima) no lado afetado/doente dos dois datasets**, sem exceção
+relevante. **Sinalização TGF-beta (KEGG 04350) está para cima tanto no SUI (TGFB3, SMAD2)
+quanto no POP (TGFB2 + genes de ECM relacionados: COMP, INHBA, BMP8B, THBS4, ID4)** — achado
+real, limpo, coerente com a própria discussão do Chen 2003 sobre TGF-beta no remodelamento de
+matriz extracelular em SUI. Esta é a evidência de via KEGG mais forte e mais defensável de
+todo o projeto.
+
 ## GSEA real (RNA-seq) no par original POP x SUI (o achado dos "4 genes")
 
 Seguindo sugestão do professor (repassada pela usuária): já que POP (GSE208261) e SUI
