@@ -8,10 +8,12 @@ pop_normal    <- read.csv("results/GSEA_classic_POP_KEGG.csv")
 pop_preranked <- read.csv("results/GSEA_preranked_POP_KEGG_genesetpermutation.csv")
 chen06 <- read.csv("results/GSEA_preranked_Chen2006_KEGG.csv")
 chen03 <- read.csv("results/GSEA_preranked_Chen2003_KEGG.csv")
+wei20  <- if (file.exists("results/GSEA_preranked_Wei2020_KEGG.csv")) read.csv("results/GSEA_preranked_Wei2020_KEGG.csv") else NULL
 
 for (df in c("pop_normal", "pop_preranked", "chen06", "chen03")) {
   d <- get(df); d$PATH <- sprintf("%05d", as.integer(d$PATH)); assign(df, d)
 }
+if (!is.null(wei20)) wei20$PATH <- sprintf("%05d", as.integer(wei20$PATH))
 
 compare <- function(a, b, name_a, name_b, fdr) {
   a_sig <- subset(a, p.adjust < fdr)
@@ -53,13 +55,31 @@ cat("=========================================================\n")
 r4a <- compare(pop_preranked, chen03, "POP_preranked", "Chen2003", 0.25)
 r4b <- compare(pop_preranked, chen03, "POP_preranked", "Chen2003", 0.05)
 
-dir.create("results", showWarnings = FALSE)
 all_results <- list(
   POP_normal_x_Chen2006_FDR025 = r1a, POP_normal_x_Chen2006_FDR005 = r1b,
   POP_preranked_x_Chen2006_FDR025 = r2a, POP_preranked_x_Chen2006_FDR005 = r2b,
   POP_normal_x_Chen2003_FDR025 = r3a, POP_normal_x_Chen2003_FDR005 = r3b,
   POP_preranked_x_Chen2003_FDR025 = r4a, POP_preranked_x_Chen2003_FDR005 = r4b
 )
+
+if (!is.null(wei20)) {
+  cat("\n=========================================================\n")
+  cat("POP normal (fenótipo) vs Wei 2020 (preranked)\n")
+  cat("=========================================================\n")
+  r5a <- compare(pop_normal, wei20, "POP_normal", "Wei2020", 0.25)
+  r5b <- compare(pop_normal, wei20, "POP_normal", "Wei2020", 0.05)
+  cat("\n=========================================================\n")
+  cat("POP preranked (rótulo de gene set) vs Wei 2020 (preranked)\n")
+  cat("=========================================================\n")
+  r6a <- compare(pop_preranked, wei20, "POP_preranked", "Wei2020", 0.25)
+  r6b <- compare(pop_preranked, wei20, "POP_preranked", "Wei2020", 0.05)
+  all_results$POP_normal_x_Wei2020_FDR025 <- r5a
+  all_results$POP_normal_x_Wei2020_FDR005 <- r5b
+  all_results$POP_preranked_x_Wei2020_FDR025 <- r6a
+  all_results$POP_preranked_x_Wei2020_FDR005 <- r6b
+}
+
+dir.create("results", showWarnings = FALSE)
 for (nm in names(all_results)) {
   if (nrow(all_results[[nm]]) > 0) {
     write.csv(all_results[[nm]], paste0("results/11_shared_", nm, ".csv"), row.names = FALSE)

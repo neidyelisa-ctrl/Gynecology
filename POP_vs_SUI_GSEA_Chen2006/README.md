@@ -42,7 +42,9 @@ resto do repositório.
 | `scripts/08_cruzamento_DEG_Chen2003_GO_KEGG.R` | O MESMO processo do script 06, agora com o segundo artigo do Chen (2003, fase proliferativa) | `results/08_*` |
 | `scripts/09_GSEA_preranked_Chen2003.R` | GSEA preranked no painel do Chen 2003 (mesmo método do script 03) | `results/GSEA_preranked_Chen2003_KEGG.csv` |
 | `scripts/10_GSEA_preranked_POP_KEGG.R` | GSEA preranked do POP com permutação de rótulo de gene set (em vez de fenótipo) — para comparar diretamente com o GSEA "normal" do script 02, no mesmo dataset | `results/GSEA_preranked_POP_KEGG_genesetpermutation.csv`, `results/10_comparacao_metodos_POP_normal_vs_preranked.csv` |
-| `scripts/11_vias_compartilhadas_final.R` | Consolidação: vias compartilhadas entre os 2 métodos de GSEA do POP e os 2 artigos do Chen | `results/11_shared_*.csv` |
+| `scripts/11_vias_compartilhadas_final.R` | Consolidação: vias compartilhadas entre os 2 métodos de GSEA do POP e os 3 painéis de SUI (Chen 2003, Chen 2006, Wei 2020) | `results/11_shared_*.csv` |
+| `scripts/12_cruzamento_DEG_Wei2020_GO_KEGG.R` | O MESMO processo dos scripts 06/08, agora com o TERCEIRO painel de SUI (Wei et al. 2020) | `results/12_*` |
+| `scripts/13_GSEA_preranked_Wei2020.R` | GSEA preranked no painel do Wei 2020 (ranking = log2(fold change), sem p-valor por gene disponível) | `results/GSEA_preranked_Wei2020_KEGG.csv` |
 
 Pré-requisitos (scripts 1-4, já resolvidos neste ambiente via `apt`, mas
 seguem os nomes padrão do Bioconductor para quem for rodar em outro lugar):
@@ -307,6 +309,63 @@ contradiz) o que as seções 5-6 já mostraram: a convergência real entre POP e
 SUI está a nível de GENE INDIVIDUAL e de GO (queratinização, Chen 2006) —
 não aparece como via KEGG nomeada porque o painel do Chen é pequeno demais
 para esse tipo de teste ter poder estatístico.
+
+### 10) Terceiro painel de SUI: Wei et al. 2020 (scripts 12-13) — mesmo tecido, mulheres pós-menopausa
+
+Wei A, Wang R, Wei K, Dai C, Huang Y, Xu P, Xu J, Tang H, Zhang Y, Fan Y.
+*"LncRNA and mRNA Expression Profiling in the Periurethral Vaginal Wall
+Tissues of Postmenopausal Women with Stress Urinary Incontinence."*
+Reprod Sci. 2020;27:1490-1501. 11 pares SUI x continentes (mulheres
+PÓS-menopausa — diferente das duas do Chen, que são pré-menopausa), mesmo
+tipo de tecido (parede vaginal periuretral), array Arraystar Human lncRNA +
+mRNA V4.0.
+
+**Limitação importante deste painel, diferente dos dois do Chen**: o artigo
+identificou 7.102 mRNAs diferencialmente expressos no total (FC≥2, P<0,05)
+— muito mais que os painéis do Chen — mas **o PDF fornecido só traz as
+Tabelas 5 e 6 do artigo impresso (top 20 up-regulados + top 20
+down-regulados = 40 genes, sem p-valor individual por gene, só fold
+change)**. A tabela completa (Material Suplementar S2) está hospedada à
+parte no site da revista e não veio com o PDF. **Na prática, este painel
+(39 genes únicos após remover 1 duplicata) é MENOR que os dois do Chen
+(59-69 genes)** — o ganho de poder estatístico do "7.102" só existiria se
+a Tabela S2 completa fosse obtida.
+
+**mRNA vs. lncRNA**: o artigo também lista 8.840 lncRNAs diferencialmente
+expressos, mas eles NÃO foram usados aqui — a maioria não tem símbolo de
+gene estável (aparecem como `TCONS_00017996`, `XLOC_008852`, IDs de
+transcrito, não de gene) e não tem anotação KEGG/GO no `org.Hs.eg.db`. Só
+os mRNAs (equivalentes a "gene", no mesmo sentido que os arrays do Chen e
+do POP) são compatíveis com este pipeline.
+
+**Resultados**:
+- **Interseção estrita**: 0 genes.
+- **Concordância de direção**: **11 de 33 genes testáveis (33,3%) — ABAIXO
+  de 50%** (teste binomial, p=0,080, não significativo, mas na direção
+  OPOSTA da que se esperaria para convergência). Diferente do Chen 2006
+  (68% concordante) e mais parecido com o Chen 2003 (56,5%, também sem
+  convergência) — este painel específico NÃO mostra o mesmo padrão de
+  convergência com o POP.
+- **GO/KEGG nos 11 genes concordantes**: tecnicamente "significativo"
+  (126 de 141 termos GO), mas **cada termo tem Count=1** (um gene só) —
+  isso não é enriquecimento real, é o mesmo artefato de gene-único-genérico
+  já documentado várias vezes neste projeto (qualquer gene bate em dezenas
+  de termos GO só dele, sem relação nenhuma com o tema da tese). **Não
+  cite estes termos GO isoladamente na tese.**
+- **GSEA preranked (KEGG)**: só 5 vias testáveis (painel muito pequeno);
+  **0 significativas mesmo a FDR<0,25**.
+- **Vias compartilhadas com o POP** (nos 2 métodos de GSEA do POP): **0**.
+
+**Leitura honesta**: este terceiro painel, do jeito que está disponível
+para nós (só o top-40 do artigo impresso, mulheres pós-menopausa), não
+reforça nem contradiz o eixo de queratinização do Chen 2006 de forma
+estatisticamente válida — os números têm cara de ruído (painel pequeno,
+sem p-valor por gene, GO artefactual). **Se você conseguir a Tabela
+Suplementar S2 completa** (7.102 mRNAs, no site do artigo, seção
+"Electronic supplementary material"), esse painel passaria a ser o mais
+forte dos três — bem maior que os dois do Chen, e com uma métrica de
+ranking real (score contínuo por gene), permitindo GSEA no sentido pleno
+do método, não a versão painel-pequeno usada aqui.
 
 ## Limitações deste ambiente (leia antes de levar os números para a tese)
 
