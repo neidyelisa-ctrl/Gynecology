@@ -1,0 +1,1 @@
+Nenhuma via KEGG compartilhada entre o GSEA classico do POP e o GSEA preranked do Chen 2006 a FDR<0.05.

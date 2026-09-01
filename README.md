@@ -957,3 +957,36 @@ painéis de literatura).
   enfraquecimento estrutural crônico) — um ponto de discussão legítimo para a tese, não uma
   falha em achar convergência.
 - `results/GSEA_POP_vs_SUI36h_real_RNAseq.xlsx` — deliverable completo em inglês (5 abas).
+
+## Pasta separada e autocontida: DEG(POP) + GSEA preranked(Chen2006) x GSEA clássico(POP)
+
+A usuária pediu, num pedido novo e específico: achar os DEGs do POP
+(logFC>1, FDR<0,05), rodar GSEA preranked nos DEGs do artigo do Chen (SUI) e
+GSEA clássico nos genes do POP, dizer quais vias são compartilhadas pelos
+dois grupos, com scripts prontos para ela rodar no R, entregue numa **pasta
+separada** dentro do repositório.
+
+- **`POP_vs_SUI_GSEA_Chen2006/`** — pasta nova, autocontida (não depende do
+  resto do repositório: tem seus próprios `data/`, `scripts/`, `results/` e
+  `README.md`). Reaproveita a mesma metodologia já validada nas seções
+  acima (GSEA reimplementado do zero — permutação de fenótipo/sign-flip
+  para o POP, permutação de rótulo de gene set para o painel curto do Chen
+  2006 — vias KEGG via `org.Hs.eg.db` offline), mas **recalculada do zero
+  nesta sessão** (não copiada dos resultados antigos) para conferir
+  reprodutibilidade antes de entregar: os números batem com os já
+  publicados no restante deste README (117 DEGs no POP; 75/218 vias KEGG do
+  POP significativas a FDR<0,05).
+- **Resposta principal**: comparando o GSEA clássico do POP com o GSEA
+  preranked do Chen 2006 (mesma via KEGG significativa nos dois lados),
+  **zero vias compartilhadas a FDR<0,05** e **só 1 (via genérica de resposta
+  imune, `05140`, não temática de ECM/queratinização) a FDR<0,25** — ver
+  `POP_vs_SUI_GSEA_Chen2006/README.md` para os números completos e a
+  ressalva de que essa é a resposta esperada (não um bug) dado o tamanho
+  pequeno do painel Chen 2006 comparado ao transcriptoma inteiro do POP. O
+  eixo de queratinização (achado central do projeto, replicado 7+ vezes)
+  continua real e visível a nível de gene individual e de GO — resumido
+  como contexto complementar na mesma pasta.
+- Inclui `scripts/05_OPCIONAL_upgrade_msigdbr_fgsea.R`, pronto para a
+  usuária rodar no próprio computador (internet normal) e obter a versão
+  definitiva com a base completa do MSigDB (Hallmark+KEGG+Reactome) via
+  `fgsea`, no lugar do KEGG congelado do `org.Hs.eg.db` usado aqui.
