@@ -39,6 +39,10 @@ resto do repositório.
 | `scripts/05_OPCIONAL_upgrade_msigdbr_fgsea.R` | **Rode no seu computador**, com internet normal — versão com `fgsea`+`msigdbr` (MSigDB completo: Hallmark+KEGG+Reactome, nomes de via legíveis) | `results/fgsea_*` |
 | `scripts/06_cruzamento_DEG_GO_KEGG.R` | A abordagem original (antes do conselho do professor): cruza DEG(POP) com a lista do Chen 2006, ORA (GO/KEGG) nos genes em comum/concordantes | `results/06_*` |
 | `scripts/07_score_painel_queratinizacao.R` | Escore de painel (6 genes do eixo de queratinização) testado diretamente nas 12 pacientes do POP — a proposta de validação "sem forçar" | `results/07_*` |
+| `scripts/08_cruzamento_DEG_Chen2003_GO_KEGG.R` | O MESMO processo do script 06, agora com o segundo artigo do Chen (2003, fase proliferativa) | `results/08_*` |
+| `scripts/09_GSEA_preranked_Chen2003.R` | GSEA preranked no painel do Chen 2003 (mesmo método do script 03) | `results/GSEA_preranked_Chen2003_KEGG.csv` |
+| `scripts/10_GSEA_preranked_POP_KEGG.R` | GSEA preranked do POP com permutação de rótulo de gene set (em vez de fenótipo) — para comparar diretamente com o GSEA "normal" do script 02, no mesmo dataset | `results/GSEA_preranked_POP_KEGG_genesetpermutation.csv`, `results/10_comparacao_metodos_POP_normal_vs_preranked.csv` |
+| `scripts/11_vias_compartilhadas_final.R` | Consolidação: vias compartilhadas entre os 2 métodos de GSEA do POP e os 2 artigos do Chen | `results/11_shared_*.csv` |
 
 Pré-requisitos (scripts 1-4, já resolvidos neste ambiente via `apt`, mas
 seguem os nomes padrão do Bioconductor para quem for rodar em outro lugar):
@@ -209,6 +213,100 @@ significativa) ao nível de paciente individual.
 a distribuição do escore nas 12 pacientes; painel direito mostra os 6 genes
 individualmente por paciente (dá para ver que `S100A7` tem a maior amplitude
 de variação, e que a paciente 4 é uma "outlier" que puxa a média).
+
+### 7) Segundo artigo do Chen (2003, fase proliferativa) — mesmo processo (scripts 08-09)
+
+Chen B, Wen Y, Zhang Z, Wang H, Warrington JA, Polan ML. *"Menstrual
+phase-dependent gene expression differences in periurethral vaginal tissue
+from women with stress incontinence."* Am J Obstet Gynecol. 2003;189(1):
+89-97. Mesmos 5 pares SUI x continentes do Chen 2006, mas amostrados na fase
+PROLIFERATIVA do ciclo menstrual (não secretória), array Affymetrix HuGeneFL
+(6800 genes — menor/mais antigo que o U133A do Chen 2006). 90 genes
+candidatos no artigo (62 up / 28 down); **69 mapeados com confiança** para
+símbolo HGNC atual (43 up / 26 down) — conferido linha a linha contra o PDF
+antes de rodar (ex.: PPIF p=0,02358 FC=-3,1; ALOX12 p=0,03810 FC=-2,7,
+ambos batem exatamente com o texto original).
+
+- **Interseção estrita** (DEG no POP E na lista do Chen 2003): **0 genes**.
+- **Concordância de direção**: **35 de 62 genes testáveis (56,5%)** — teste
+  binomial, **p = 0,374 (NÃO significativo)**. Diferente do Chen 2006 (68%,
+  p=0,013) — a lista da fase proliferativa não converge com o POP do jeito
+  que a lista da fase secretória converge.
+- **GO/KEGG nos 35 genes concordantes**: tecnicamente 179 termos GO e 23
+  vias KEGG saem significativos (FDR<0,05) — **mas leia com cautela**:
+  como a concordância em si NÃO foi estatisticamente significativa (p=0,374,
+  ou seja, esses 35 genes não são diferentes de qualquer metade aleatória
+  da lista de 62), esse enriquecimento não tem a mesma base sólida do Chen
+  2006. Ainda assim, chama atenção o **eixo TGF-beta** aparecendo
+  repetidamente: `SMAD2` e `TGFB3` juntos em 6 das 10 vias KEGG mais
+  significativas (adherens junction, cell cycle, pathways in cancer,
+  endocytosis, hypertrophic/dilated cardiomyopathy) e no termo GO
+  *"transforming growth factor beta receptor signaling pathway"*
+  (HPGD/SMAD2/TGFB3). Isso bate com a própria discussão do artigo original
+  do Chen 2003, que destaca TGFβ-3 como um dos genes centrais de ECM
+  encontrados. Trate como hipótese a explorar, não achado confirmado.
+- **GSEA preranked do Chen 2003 (KEGG)**: **0 vias significativas mesmo a
+  FDR<0,25** (47 vias testáveis) — resultado negativo, consistente com a
+  falta de concordância de direção acima.
+
+### 8) GSEA "normal" (fenótipo) vs. GSEA preranked (rótulo de gene set) no POP — a comparação pedida (script 10)
+
+Rodamos os DOIS métodos no MESMO ranking do POP (t pareado, transcriptoma
+inteiro, as mesmas 218 vias KEGG) para ver o efeito real da escolha do tipo
+de permutação — o ponto que motivou a correção já documentada acima.
+
+| Método | Vias sig. FDR<0,05 | Vias sig. FDR<0,25 |
+|---|---|---|
+| **Normal** (permutação de fenótipo, sign-flip pareado) | 75 | 94 |
+| **Preranked** (permutação de rótulo de gene set) | 64 | 140 |
+| **Nos DOIS métodos ao mesmo tempo** | **8** | — |
+| **Só no preranked** (não confirma no normal — candidato a falso positivo) | 56 | — |
+
+**Leitura**: os dois métodos concordam bem menos do que se imagina — de 75
+vias significativas no método correto (fenótipo) e 64 no método mais
+liberal (rótulo de gene set), só **8 aparecem nos dois**. Isso é a prova
+direta, no seu próprio dataset, do alerta de Subramanian et al. 2005: a
+permutação de rótulo de gene set infla o número de vias "significativas"
+(140 vs. 94 a FDR<0,25) porque ignora a correlação real entre genes de uma
+mesma via. **A direção (sinal do NES), porém, é praticamente sempre a
+mesma nos dois métodos** quando dá pra comparar (101 de 101 casos válidos
+concordam) — ou seja, os dois métodos concordam sobre "a via sobe ou desce",
+só discordam sobre "isso é forte o suficiente pra contar como
+significativo". **Use sempre o método de fenótipo (`GSEA_classic_POP_KEGG.csv`)
+como a referência principal** — é o metodologicamente correto para este
+dataset (tem matriz bruta por amostra); o preranked existe aqui só para
+essa demonstração comparativa.
+
+### 9) Vias compartilhadas — versão final consolidada (script 11)
+
+Testando POP (2 métodos) x Chen (2 artigos), 4 combinações, 2 limiares cada:
+
+| Comparação | FDR<0,25 | FDR<0,05 |
+|---|---|---|
+| POP normal x Chen 2006 | **1** (05140) | 0 |
+| POP preranked x Chen 2006 | **2** (04062, 05223) | 0 |
+| POP normal x Chen 2003 | 0 | 0 |
+| POP preranked x Chen 2003 | 0 | 0 |
+
+**Atenção à DIREÇÃO nas 2 vias que só aparecem via POP-preranked**: `04062`
+(chemokine signaling) e `05223` (non-small cell lung cancer) têm NES
+**positivo** no POP-preranked (para cima) mas NES **negativo** no Chen 2006
+(para baixo) — **direções opostas**. Isso não é uma via convergente de
+verdade; é exatamente o tipo de falso positivo que a seção 8 acima avisa
+que o método preranked/rótulo-de-gene-set produz. A única via que aparece
+via o método CORRETO (POP normal/fenótipo) — `05140`, Leishmaniasis — tem
+a mesma direção (negativa) nos dois lados, mas é uma via genérica de
+resposta imune (movida por `HLA-DRB4`/`PRKCB` do lado do Chen, e por
+dezenas de genes imunes/inflamatórios do lado do POP), não uma via
+mecanisticamente específica de ECM/queratinização.
+
+**Conclusão final e honesta desta seção**: nenhuma via KEGG nomeada e
+mecanisticamente relevante é compartilhada entre POP e nenhum dos dois
+artigos do Chen, em nenhuma combinação de método testada. Isso reforça (não
+contradiz) o que as seções 5-6 já mostraram: a convergência real entre POP e
+SUI está a nível de GENE INDIVIDUAL e de GO (queratinização, Chen 2006) —
+não aparece como via KEGG nomeada porque o painel do Chen é pequeno demais
+para esse tipo de teste ter poder estatístico.
 
 ## Limitações deste ambiente (leia antes de levar os números para a tese)
 
