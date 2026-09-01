@@ -43,8 +43,10 @@ resto do repositório.
 | `scripts/09_GSEA_preranked_Chen2003.R` | GSEA preranked no painel do Chen 2003 (mesmo método do script 03) | `results/GSEA_preranked_Chen2003_KEGG.csv` |
 | `scripts/10_GSEA_preranked_POP_KEGG.R` | GSEA preranked do POP com permutação de rótulo de gene set (em vez de fenótipo) — para comparar diretamente com o GSEA "normal" do script 02, no mesmo dataset | `results/GSEA_preranked_POP_KEGG_genesetpermutation.csv`, `results/10_comparacao_metodos_POP_normal_vs_preranked.csv` |
 | `scripts/11_vias_compartilhadas_final.R` | Consolidação: vias compartilhadas entre os 2 métodos de GSEA do POP e os 3 painéis de SUI (Chen 2003, Chen 2006, Wei 2020) | `results/11_shared_*.csv` |
-| `scripts/12_cruzamento_DEG_Wei2020_GO_KEGG.R` | O MESMO processo dos scripts 06/08, agora com o TERCEIRO painel de SUI (Wei et al. 2020) | `results/12_*` |
-| `scripts/13_GSEA_preranked_Wei2020.R` | GSEA preranked no painel do Wei 2020 (ranking = log2(fold change), sem p-valor por gene disponível) | `results/GSEA_preranked_Wei2020_KEGG.csv` |
+| `scripts/12_cruzamento_DEG_Wei2020_GO_KEGG.R` | Versão INICIAL (top-40 do artigo impresso) — SUPERADA pelos scripts 14-15, mantida por histórico | `results/12_*` |
+| `scripts/13_GSEA_preranked_Wei2020.R` | Versão INICIAL (top-40) — SUPERADA pelo script 15 | `results/GSEA_preranked_Wei2020_KEGG.csv` |
+| `scripts/14_cruzamento_DEG_Wei2020full_GO_KEGG.R` | **Versão DEFINITIVA**: mesmo processo dos scripts 06/08/12, agora com a Tabela Suplementar S2 COMPLETA do Wei 2020 (6.118 genes reais, com p-valor) | `results/14_*` |
+| `scripts/15_GSEA_preranked_Wei2020full.R` | **Versão DEFINITIVA**: GSEA preranked no painel completo (ranking = sinal×-log10(p), p-valor real por gene) | `results/GSEA_preranked_Wei2020full_KEGG.csv` |
 
 Pré-requisitos (scripts 1-4, já resolvidos neste ambiente via `apt`, mas
 seguem os nomes padrão do Bioconductor para quem for rodar em outro lugar):
@@ -366,6 +368,98 @@ Suplementar S2 completa** (7.102 mRNAs, no site do artigo, seção
 forte dos três — bem maior que os dois do Chen, e com uma métrica de
 ranking real (score contínuo por gene), permitindo GSEA no sentido pleno
 do método, não a versão painel-pequeno usada aqui.
+
+### 11) ATUALIZAÇÃO: Wei 2020 com a Tabela Suplementar S2 COMPLETA (scripts 14-15) — o maior achado do painel de literatura até agora
+
+A usuária conseguiu baixar a Tabela Suplementar S2 real do artigo (Electronic
+Supplementary Material 2, `data/wei2020_TableS2_mRNA_original.xls`) — a saída
+completa do software original (GeneSpring GX), com P-value, FDR, Fold Change
+E intensidade normalizada por amostra individual (3 SUI x 3 Ctrl, o
+subconjunto de 6 amostras usado no array, por gene). Extraída para
+`data/wei2020_mRNA_full.csv`: **7.102 linhas → 6.118 genes únicos** após
+remover sondas duplicadas (mantendo a de menor p-valor por gene). **Esta
+seção SUBSTITUI a análise anterior do Wei 2020 (scripts 12-13, painel de
+40 genes) como referência principal** — mesma limitação de fundo continua
+(a tabela já vem pré-filtrada pelo próprio estudo, não é o array inteiro
+de ~20.730 genes testados), mas 6.118 genes é ~100x maior que o painel
+anterior e permite testar quase todo o KEGG.
+
+**(a) Interseção estrita (DEG POP ∩ Wei2020)**: **15 genes** — de longe a
+maior sobreposição direta do projeto inteiro: `WEE1, SLN, ADAMTS4, NEDD9,
+NFATC2, NR4A3, SNAI1, IGJ, CSF3, AREG, APOLD1, THBD, ATF3, IGLL1, LDLR`.
+
+**(b) Concordância de direção — resultado SURPREENDENTE, leia com
+atenção**: **2.215 de 4.797 genes testáveis (46,2%) concordantes — ABAIXO
+de 50%**, teste binomial **p = 1,24×10⁻⁷ (extremamente significativo)**.
+Isto é o OPOSTO do Chen 2006 (68% concordante, convergência real) — aqui
+temos **discordância estatisticamente significativa**: genes que sobem no
+Wei 2020 (SUI pós-menopausa) tendem a DESCER no POP, e vice-versa, mais do
+que o esperado por acaso. Não é ruído (a amostra é grande demais para
+isso, p=1,2×10⁻⁷) — é um padrão real. Hipóteses para a diferença em
+relação ao Chen 2006 (mesmo tecido, mesma doença): (i) mulheres
+PÓS-menopausa (Wei) vs PRÉ-menopausa (Chen/POP) — o estado hormonal pode
+alterar a direção da resposta transcricional; (ii) desenho não-pareado do
+Wei (3 SUI x 3 Ctrl, mulheres diferentes) vs desenho pareado do POP (mesma
+paciente); (iii) plataformas de array diferentes. **Discuta esta
+divergência explicitamente na tese como uma limitação real de comparar
+resultados entre estudos com populações/desenhos diferentes — não tente
+esconder ou "resolver" o contraste, ele é uma informação genuína.**
+
+**(c) GO/KEGG na interseção estrita (15 genes)**: 164 de 195 termos GO
+significativos (FDR<0,05), vários com >1 gene de suporte (ex.: *negative
+regulation of transcription by RNA polymerase II* — NFATC2/NR4A3/SNAI1/ATF3,
+4 genes). KEGG: 0 de 21 (todos Count=1, ruído).
+
+**(d) GO/KEGG nos 2.215 genes concordantes**: aqui sim, com uma amostra
+grande, o enriquecimento é robusto — **605 de 5.212 termos GO
+significativos** (dominado por regulação da transcrição, sinalização,
+diferenciação celular, migração celular, adesão celular — temas amplos,
+esperado com 2.215 genes de entrada) e, mais importante, **109 de 214 vias
+KEGG significativas**, incluindo:
+- **04350 — Sinalização TGF-beta** (21 genes: `TGFBR1/ID3/RPS6KB2/SMURF1/
+  MAPK1/BMP2/FST/SMAD3/BMP6/TGFBR2/PPP2CA/BMP8A/ID1/THBS2/RHOA/TGFB1/SMAD5/
+  NODAL/BMP5/ACVR1C/MAPK3`, FDR=2,8×10⁻⁷) — **QUARTA confirmação
+  independente do eixo TGF-beta neste projeto** (depois do Chen 2003
+  humano — SMAD2/TGFB3 —, do modelo de rata pós-parto de Kerns/Damaser —
+  SMAD2 — e agora aqui, com suporte estatístico muito mais forte, 21
+  genes de uma vez). Este é o achado de via mais robusto e mais replicado
+  de todo o projeto.
+- Outras vias de tecido conjuntivo/adesão: *regulation of actin
+  cytoskeleton* (04810), *focal adhesion* (não listada no top 15 mas
+  presente na tabela completa), *pathways in cancer* (04520, genérica).
+
+**(e) GSEA preranked (KEGG, painel completo)**: **0 de 201 vias
+significativas a FDR<0,05; 52 a FDR<0,25** — muito mais rico que qualquer
+painel anterior (Chen 2003: 0, Chen 2006: 3, Wei top-40: 0).
+
+**(f) Vias compartilhadas com o GSEA do POP — o maior número do projeto**:
+
+| Comparação | FDR<0,25 | FDR<0,05 |
+|---|---|---|
+| POP normal (fenótipo) x Wei2020(completo) | **19** | 0 |
+| POP preranked (rótulo de gene set) x Wei2020(completo) | **36** | 0 |
+
+De longe o maior número de vias compartilhadas do projeto (bem acima do
+"0-2" dos artigos do Chen) — **mas, checando a coluna `Mesma_direcao`
+(sinal do NES nos dois lados) nos resultados salvos
+(`results/11_shared_POP_*_x_Wei2020_FDR025.csv`), a MAIORIA é
+DISCORDANTE** (POP preranked: só 3 de 36 concordantes; POP normal: só 1 de
+6 comparáveis, o resto tem NES=NA de um lado — caso de borda já documentado
+na seção 8). **Isto é consistente com o achado (b) acima**: o padrão
+dominante entre Wei2020 e POP é de mudança em direções opostas nas mesmas
+vias, não convergência.
+
+**Leitura honesta e final desta seção**: com dados reais e completos, o
+Wei 2020 mostra MUITO mais sinal estatístico que os dois artigos do Chen
+(tanto a nível de gene quanto de via) — mas o sinal dominante é de
+**discordância** com o POP, não convergência, provavelmente refletindo a
+diferença de população (pós vs pré-menopausa) ou desenho experimental. Ainda
+assim, dentro do subconjunto real de 2.215 genes concordantes, o eixo
+**TGF-beta continua aparecendo com força** — a quarta vez neste projeto,
+agora com o suporte estatístico mais robusto de todos. **Recomendação para
+a tese**: reporte os dois achados lado a lado (discordância ampla + TGF-beta
+concordante e robusto dentro do subconjunto que concorda) em vez de
+escolher um e ignorar o outro — os dois são reais e ambos informativos.
 
 ## Limitações deste ambiente (leia antes de levar os números para a tese)
 

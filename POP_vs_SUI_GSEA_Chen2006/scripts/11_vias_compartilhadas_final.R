@@ -8,7 +8,7 @@ pop_normal    <- read.csv("results/GSEA_classic_POP_KEGG.csv")
 pop_preranked <- read.csv("results/GSEA_preranked_POP_KEGG_genesetpermutation.csv")
 chen06 <- read.csv("results/GSEA_preranked_Chen2006_KEGG.csv")
 chen03 <- read.csv("results/GSEA_preranked_Chen2003_KEGG.csv")
-wei20  <- if (file.exists("results/GSEA_preranked_Wei2020_KEGG.csv")) read.csv("results/GSEA_preranked_Wei2020_KEGG.csv") else NULL
+wei20  <- if (file.exists("results/GSEA_preranked_Wei2020full_KEGG.csv")) read.csv("results/GSEA_preranked_Wei2020full_KEGG.csv") else NULL
 
 for (df in c("pop_normal", "pop_preranked", "chen06", "chen03")) {
   d <- get(df); d$PATH <- sprintf("%05d", as.integer(d$PATH)); assign(df, d)
@@ -25,6 +25,8 @@ compare <- function(a, b, name_a, name_b, fdr) {
     out <- merge(a_sig[a_sig$PATH %in% common, c("PATH","Nh","NES","p.adjust")],
                  b_sig[b_sig$PATH %in% common, c("PATH","Nh","NES","p.adjust")],
                  by = "PATH", suffixes = c(paste0("_", name_a), paste0("_", name_b)))
+    nes_cols <- grep("^NES_", names(out), value = TRUE)
+    out$Mesma_direcao <- sign(out[[nes_cols[1]]]) == sign(out[[nes_cols[2]]])
     print(out)
     return(out)
   }
