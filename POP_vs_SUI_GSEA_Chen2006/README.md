@@ -6,6 +6,14 @@ inteiro) nos genes do POP, e a comparação de vias compartilhadas entre os dois
 Todo o código roda do zero a partir dos dados em `data/` — não depende do
 resto do repositório.
 
+> **🔎 Procurando "o script para rodar"? É este:
+> [`scripts/00_SCRIPT_PRINCIPAL_rode_isto.R`](scripts/00_SCRIPT_PRINCIPAL_rode_isto.R).**
+> Um único arquivo, roda do início ao fim no RStudio, faz DEG do POP e do SUI
+> (lendo as 2 abas do Excel do Wei2020), volcano plots, o eixo de
+> queratinização (com heatmap) e os gráficos de barra das vias GO/KEGG —
+> **todos os gráficos ficam salvos em [`figures/`](figures/)**. Ver seção 17
+> abaixo para a descrição completa de cada figura.
+
 ## Os dois conjuntos de dados
 
 - **POP**: `data/GSE53868_series_matrix.txt` — GSE53868, "Micro-array analysis
@@ -791,6 +799,71 @@ defensável. Isso reforça, mais uma vez, que a evidência mais forte deste
 projeto continua sendo os testes que não dependem de uma interseção
 estrita tão pequena — concordância de direção em painéis maiores (seção
 11) e a via TGF-beta replicada em 4 pares POP×SUI (seção 13).
+
+### 17) O SCRIPT ÚNICO com todos os gráficos (`scripts/00_SCRIPT_PRINCIPAL_rode_isto.R`)
+
+Resposta direta a três pedidos da usuária no mesmo turno: "onde foi o eixo
+de queratinização?", "você leu as 2 abas do Excel do Wei2020?", e "não
+estou achando o script para rodar no R, quero todos os gráficos possíveis
+(volcano, heatmap, vias...)". Em vez de apontar para os 27 scripts
+anteriores, este arquivo único reproduz do zero as partes centrais do
+projeto (DEG POP, DEG SUI, cruzamento, eixo de queratinização) e gera
+**todas as figuras em `figures/`**:
+
+| Figura | O que mostra |
+|---|---|
+| `01_volcano_POP_GSE53868.png` | Volcano plot do POP (FDR<0,05, \|log2FC\|>1), com os 15 genes de menor p-valor rotulados |
+| `02_volcano_SUI_Wei2020.png` | Volcano plot do SUI/Wei2020 (P<0,05, \|log2FC\|>1, critério original do artigo) |
+| `03_heatmap_queratinizacao_POP.png` | Heatmap (z-score por gene) dos 6 genes do eixo de queratinização (KRT14/16/17, PKP1, S100A7, COL17A1) nas 12 pacientes pareadas do POP |
+| `04_heatmap_queratinizacao_SUI.png` | Equivalente no Wei2020 — **pulado automaticamente** (só COL17A1 dos 6 genes está no painel do Wei2020; o eixo veio do Chen2006, um painel de SUI diferente — ver explicação abaixo) |
+| `05_heatmap_top40_concordantes_POP.png` | Heatmap dos 40 genes concordantes POP×SUI de menor p-valor no POP |
+| `06_barplot_GO_queratinizacao.png` | Barras dos termos GO Biological Process mais significativos do eixo de queratinização |
+| `07_barplot_KEGG_Wei2020xPOP.png` | Barras das vias KEGG mais significativas no cruzamento Wei2020×POP (TGF-beta marcado com `*`) |
+| `08_barplot_vias_recorrentes_6pares.png` | Vias KEGG recorrentes em ≥2 dos 6 pares POP×SUI testados (seção 13) — TGF-beta no topo, 4/4 pares testáveis |
+
+**Onde foi parar o eixo de queratinização — resposta direta**: os 6 genes
+(KRT14, KRT16, KRT17, PKP1, S100A7, COL17A1) vêm do cruzamento **Chen2006 x
+POP** (seções 5-6 acima), não do Wei2020 — são o achado central do projeto,
+replicado 7+ vezes. O script imprime a tabela dos 6 genes com logFC/p-valor
+no POP e gera o heatmap `03_heatmap_queratinizacao_POP.png`. `KRT17` é o
+único individualmente significativo no POP (FDR<0,05); os outros 5
+acompanham a mesma direção (concordantes), mas sem cruzar o limiar
+individual — consistente com a seção 6 (escore de painel, tendência real
+mas não significativa a nível individual).
+
+**As 2 abas do Excel do Wei2020 — confirmação de que ambas foram lidas**:
+o script lê explicitamente `up_Sui_vs_Ctrl` (4.615 sondas) e
+`down_Sui_vs_Ctrl` (2.487 sondas) via `readxl::read_excel()`, soma as duas
+(7.102 sondas totais — bate exatamente com os 7.102 mRNAs que o artigo
+relata ter encontrado) e colapsa sondas duplicadas por gene (mantendo a de
+menor p-valor), chegando aos mesmos 6.118 genes únicos usados desde a
+seção 11. Isso está impresso no console a cada execução (`PARTE 2`), não é
+uma alegação sem verificação.
+
+**🐛 Bug real encontrado e corrigido ao montar este script (documentado
+por transparência)**: a coluna `Fold Change` da aba `down_Sui_vs_Ctrl` é
+uma convenção do GeneSpring (software dos autores) — ela guarda só a
+**magnitude** (sempre ≥2, nunca negativa), com o sinal/direção indicado
+pela coluna `Direction`/pela aba em si, não pelo valor numérico. Ao
+combinar as duas abas, calcular `log2FC = log2(FoldChange)` sem inverter o
+sinal para as linhas "down" fazia até os genes para baixo aparecerem com
+log2FC POSITIVO — visível no primeiro rascunho do volcano plot do SUI (só
+apareciam pontos "Up", nenhum "Down"). **Correção aplicada**:
+`logFC = -log2(FoldChange)` quando `Direction=="down"`. Verificação
+importante: **isso NÃO mudou nenhum número relatado nas seções 1-16
+acima** — a análise de concordância de direção (seção 11, 46,2%) sempre
+comparou a coluna `Direction` (texto "up"/"down" da própria tabela dos
+autores) contra o sinal do logFC do POP, nunca o sinal do logFC do SUI
+diretamente, então não herdava o bug. O bug afetava só (a) a classificação
+visual Up/Down/NS do volcano plot do SUI neste script novo, e (b) o valor
+numérico de `logFC_SUI` na coluna informativa do
+`results/00_cruzamento_completo_POP_x_SUI.csv` exportado por ele — ambos
+corrigidos antes de gerar as figuras finais.
+
+**Saídas em `results/`**: `wei2020_ambas_abas_combinadas.csv` (as duas
+abas já combinadas, 6.118 genes, com logFC corrigido) e
+`00_cruzamento_completo_POP_x_SUI.csv` (o cruzamento POP×SUI completo,
+4.797 genes testáveis nos dois, com direção e concordância).
 
 ## Limitações deste ambiente (leia antes de levar os números para a tese)
 
