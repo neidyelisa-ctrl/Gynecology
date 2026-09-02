@@ -460,7 +460,7 @@ if (nrow(shared_for_table) == 0) {
     members <- intersect(unique(full_members), union(pop_tested, sui_tested))
     data.frame(
       Pathway = pname, KEGG_ID = pid, Gene = members,
-      logFC_POP = pop_lookup[members], logFC_SUI = sui_lookup[members],
+      logFC_POP = unname(pop_lookup[members]), logFC_SUI = unname(sui_lookup[members]),
       stringsAsFactors = FALSE)
   })
   gene_dir_table <- do.call(rbind, rows)
