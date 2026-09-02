@@ -58,6 +58,7 @@ resto do repositório.
 | `scripts/24_DEG_POP_e_SUI_MESMO_CRITERIO_intersec_GO_KEGG.R` | DEG nos dois arquivos com critério IDÊNTICO, interseção estrita, GO/KEGG com universo corrigido — documenta o problema de circularidade encontrado ao tentar recalcular o DEG do SUI do zero | `results/24_*` |
 | `scripts/25_GSEA_classic_Wei2020_KEGG.R` | GSEA CLÁSSICO (não preranked) do Wei2020, permutação de fenótipo EXAUSTIVA (só 20 combinações possíveis com 3x3) | `results/GSEA_classic_Wei2020_KEGG.csv` |
 | `scripts/26_vias_compartilhadas_GSEA_classico_POP_x_SUI.R` | Vias compartilhadas entre os DOIS GSEA clássicos (POP e SUI), com checagem de direção | `results/26_*` |
+| `scripts/27_DEG_Wei2020_FDR_proprio_intersec_GO_KEGG.R` | Troca o critério do autor (p bruto<0,05) por FDR<0,05 usando a coluna FDR já calculada por eles (válido, não circular) — interseção cai de 15 para 3 genes | `results/27_*` |
 
 Pré-requisitos (scripts 1-4, já resolvidos neste ambiente via `apt`, mas
 seguem os nomes padrão do Bioconductor para quem for rodar em outro lugar):
@@ -738,6 +739,58 @@ em 0,05 antes mesmo de olhar os dados. **Para GSEA clássico ter poder de
 verdade no lado do SUI, seria preciso um dataset com mais réplicas por
 grupo** — recomendação registrada para se a usuária conseguir tal dataset
 no futuro.
+
+### 16) Trocando o critério do autor por FDR<0,05 (script 27) — dá pra fazer, sem circularidade
+
+A usuária perguntou se dá pra trocar o critério do autor do Wei2020 por
+"log2FC>1". **Esclarecimento primeiro**: o corte de fold change do artigo
+(fold change≥2, escala linear) **já é exatamente |log2FC|>1** —
+log2(2)=1, é a mesma coisa matematicamente, não havia nada para trocar
+aí. O que os autores usaram DIFERENTE do padrão deste projeto foi a
+**significância**: p-valor bruto<0,05, **sem correção para múltiplas
+comparações** (nenhum ajuste de FDR no critério de inclusão da Tabela
+S2). É isso que dá pra trocar por FDR<0,05 — e desta vez, SIM, deu certo,
+sem cair no problema de circularidade do script 24.
+
+**Por que não é circular desta vez**: no script 24, recalculamos a
+significância do zero a partir da intensidade por amostra — um teste novo
+rodado só nos genes JÁ pré-selecionados por serem significativos, o que
+reconfirma quase tudo (97,5%) por construção. Aqui, em vez de recalcular,
+usamos a **coluna FDR que já vem pronta na própria Tabela S2** — conferida
+antes de usar: ela varia de verdade (0,003 a 0,124, não todo mundo colado
+perto de zero), o que confirma que foi calculada pelo GeneSpring GX no
+array inteiro, ANTES do filtro de corte ser aplicado para gerar a tabela
+final — é a estatística real dos autores, não uma reconstrução nossa.
+Aplicar um corte mais rígido em cima de uma estatística já calculada
+corretamente é válido; recalcular a estatística do zero num subconjunto
+pré-selecionado não é.
+
+**Números**:
+- DEG SUI, critério original dos autores (p bruto<0,05): 6.118 genes
+- **DEG SUI, FDR<0,05 (nosso corte, coluna FDR deles)**: **3.621 de 6.118**
+  (2.574 up / 1.047 down) — quase 60% dos genes originais NÃO sobrevivem
+  à correção de múltiplas comparações. Isso por si só já é uma informação
+  relevante: o critério do artigo original (sem FDR) era bem mais
+  permissivo do que parece à primeira vista.
+- **Interseção estrita com o POP (117 DEGs)**: caiu de **15 para 3
+  genes** — `AREG, THBD, IGLL1`. Mesma direção em **2 de 3** (AREG, THBD
+  — ambos para cima nos dois; IGLL1 discordante).
+- **GO/KEGG nos 3 genes** (universo corrigido, 4.797 genes testados nos
+  dois): tecnicamente "significativo" (25 de 30 GO, 3 de 3 KEGG), mas
+  **quase tudo Count=1** — só um termo tem 2 genes (*response to cAMP*,
+  AREG/THBD, FDR=0,00035). Com apenas 3 genes de entrada, isso não é um
+  enriquecimento estatístico robusto, é a anotação individual desses 3
+  genes aparecendo — leia como curiosidade, não como achado.
+
+**Resposta direta à pergunta**: sim, consegui trocar o critério de
+significância do autor por FDR<0,05 (o fold-change já era |log2FC|>1
+desde o início, nada a trocar aí) — e o resultado é honesto: a lista de
+DEG do SUI encolhe bastante (6.118→3.621) e a interseção com o POP fica
+ainda mais estreita (15→3 genes), demais para uma história de GO/KEGG
+defensável. Isso reforça, mais uma vez, que a evidência mais forte deste
+projeto continua sendo os testes que não dependem de uma interseção
+estrita tão pequena — concordância de direção em painéis maiores (seção
+11) e a via TGF-beta replicada em 4 pares POP×SUI (seção 13).
 
 ## Limitações deste ambiente (leia antes de levar os números para a tese)
 
