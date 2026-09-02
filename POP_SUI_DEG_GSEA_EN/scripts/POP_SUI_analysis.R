@@ -424,7 +424,12 @@ report_shared <- function(fdr_cut) {
   out$Same_direction <- sign(out$NES_POP) == sign(out$NES_SUI)
   out <- out[order(out$p.adjust_POP), ]
   print(out[, c("PathwayName","Nh_POP","NES_POP","p.adjust_POP","Nh_SUI","NES_SUI","p.adjust_SUI","Same_direction")])
-  cat("Same direction in both diseases:", sum(out$Same_direction), "of", nrow(out), "\n\n")
+  n_na <- sum(is.na(out$Same_direction))
+  cat("Same direction in both diseases:", sum(out$Same_direction, na.rm = TRUE), "of",
+      sum(!is.na(out$Same_direction)), "pathways with a comparable NES on both sides")
+  if (n_na > 0) cat(" (", n_na, "excluded - NES undefined on one side, a known",
+                     "small-sample permutation-floor effect, see the SUI GSEA note above)")
+  cat("\n\n")
   out
 }
 
@@ -548,6 +553,10 @@ cat("Saved: figures/04_heatmap_DEG_SUI.png\n\n")
 
 # --- 6c. GSEA barplots (POP and SUI) ----------------------------------------
 make_gsea_barplot <- function(gsea_res, title, n_top = 15) {
+  # NES can be NA for a handful of pathways where all permuted ES values fell
+  # on one side of zero (permutation-floor edge case) - drop those before
+  # picking the top N, or the barplot shows empty rows with a label but no bar.
+  gsea_res <- gsea_res[!is.na(gsea_res$NES), ]
   d <- head(gsea_res[order(gsea_res$pvalue), ], n_top)
   d$Sig <- ifelse(d$p.adjust < 0.05, "FDR<0.05", ifelse(d$p.adjust < 0.25, "FDR<0.25", "NS"))
   d$Label <- factor(d$PathwayName, levels = rev(d$PathwayName))
@@ -613,22 +622,32 @@ ggsave("figures/08_GSEA_enrichment_plot_top_POP.png", p_run, width = 9, height =
 cat("Saved: figures/08_GSEA_enrichment_plot_top_POP.png (top pathway:", gsea_pop$PathwayName[1], ")\n\n")
 
 # --- 6f. Gene-direction heatmap for shared-pathway genes --------------------
+# Fill color = direction (up/down) so the concordance pattern is visible
+# regardless of magnitude - POP fold-changes are much smaller than SUI's, so
+# a single shared continuous color scale (fill = logFC) makes the POP column
+# look uniformly pale and hides the pattern. The actual logFC values are
+# still shown as text in each cell.
 if (nrow(gene_dir_table) > 0) {
   both_tested <- subset(gene_dir_table, Direction_POP != "not tested" & Direction_SUI != "not tested")
   if (nrow(both_tested) >= 2) {
-    dir_mat <- as.matrix(both_tested[, c("logFC_POP", "logFC_SUI")])
-    rownames(dir_mat) <- make.unique(both_tested$Gene)
-    dir_mat <- dir_mat[order(both_tested$Pathway, -abs(rowSums(dir_mat, na.rm = TRUE))), , drop = FALSE]
-    dir_mat <- head(dir_mat, 50)
-    ann_row <- data.frame(Pathway = both_tested$Pathway[match(rownames(dir_mat),
-                                                                make.unique(both_tested$Gene))],
+    fc_mat <- as.matrix(both_tested[, c("logFC_POP", "logFC_SUI")])
+    dir_mat <- ifelse(fc_mat > 0, 1, -1)
+    rownames(dir_mat) <- rownames(fc_mat) <- make.unique(both_tested$Gene)
+    ord <- order(both_tested$Pathway, -both_tested$Concordant, -abs(rowSums(fc_mat, na.rm = TRUE)))
+    dir_mat <- dir_mat[ord, , drop = FALSE]; fc_mat <- fc_mat[ord, , drop = FALSE]
+    dir_mat <- head(dir_mat, 50); fc_mat <- head(fc_mat, 50)
+    ann_row <- data.frame(Pathway = both_tested$Pathway[ord][seq_len(nrow(dir_mat))],
                            row.names = rownames(dir_mat))
+    colnames(dir_mat) <- colnames(fc_mat) <- c("POP", "SUI")
     png("figures/09_gene_direction_heatmap_shared_pathways.png",
-        width = 2400, height = max(1800, 45 * nrow(dir_mat)), res = 300)
+        width = 2600, height = max(1800, 45 * nrow(dir_mat)), res = 300)
     pheatmap(dir_mat, cluster_cols = FALSE, cluster_rows = FALSE,
              annotation_row = ann_row,
-             color = colorRampPalette(c("#2166AC", "white", "#B2182B"))(100),
-             main = "log2(Fold Change) per gene, shared pathways\n(POP vs SUI)",
+             color = c("#2166AC", "#B2182B"), breaks = c(-2, 0, 2),
+             legend = FALSE,
+             display_numbers = matrix(sprintf("%.2f", fc_mat), nrow(fc_mat)),
+             number_color = "white", fontsize_number = 7,
+             main = "Gene direction, shared pathways (POP vs SUI)\n(fill = up/down; number = log2 Fold Change)",
              fontsize = 7, fontsize_row = 6)
     dev.off()
     cat("Saved: figures/09_gene_direction_heatmap_shared_pathways.png\n\n")
