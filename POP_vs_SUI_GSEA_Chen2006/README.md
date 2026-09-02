@@ -55,6 +55,7 @@ resto do repositório.
 | `scripts/21_cruzamento_Chen2006_x_GSE12852_GO_KEGG.R` | Completa a matriz: Chen2006 x GSE12852 | `results/21_*` |
 | `scripts/22_cruzamento_Chen2003_x_GSE12852_GO_KEGG.R` | Completa a matriz: Chen2003 x GSE12852 | `results/22_*` |
 | `scripts/23_MASTER_resumo_DEG_GO_KEGG_6pares.R` | Consolida os 6 pares POP x SUI, acha vias/termos recorrentes em mais de 1 par — achou o TGF-beta (KEGG 04350) em 4 de 4 pares testáveis | `results/23_*` |
+| `scripts/24_DEG_POP_e_SUI_MESMO_CRITERIO_intersec_GO_KEGG.R` | DEG nos dois arquivos com critério IDÊNTICO, interseção estrita, GO/KEGG com universo corrigido — documenta o problema de circularidade encontrado ao tentar recalcular o DEG do SUI do zero | `results/24_*` |
 
 Pré-requisitos (scripts 1-4, já resolvidos neste ambiente via `apt`, mas
 seguem os nomes padrão do Bioconductor para quem for rodar em outro lugar):
@@ -625,6 +626,49 @@ queratinização é mais específico de tecido, mas triangulado com um
 estudo publicado externo — Zhang et al. 2024). Vale a pena apresentar os
 dois lado a lado como as duas linhas de evidência mais fortes, em vez de
 escolher uma.
+
+### 14) Voltando à interseção ESTRITA, com critério idêntico nos dois lados (script 24)
+
+A usuária pediu explicitamente: achar o DEG nos dois arquivos (GSE53868 e
+Wei2020) "de forma correta, sem erro", cada um com o MESMO critério, depois
+cruzar os genes em comum, depois GO/KEGG. Isso expôs um problema
+estatístico real que vale documentar:
+
+**Tentativa de recalcular o DEG do SUI do zero (mesmo método/critério do
+POP) deu 5.964 de 6.118 genes (97,5%) "significativos" — um artefato de
+CIRCULARIDADE, não um resultado real.** A Tabela S2 do Wei 2020 já é a
+lista PRÉ-FILTRADA pelo próprio estudo (só entram ali os genes que já
+passaram no critério original) — testar de novo a significância dentro de
+um conjunto já pré-selecionado por ser significativo reconfirma quase tudo
+por construção, não é uma segunda confirmação independente. Não há como
+evitar isso sem o array inteiro (as sondas que o Wei 2020 testou e
+descartou, não incluídas na Tabela S2). **Conclusão**: a única definição
+válida de "DEG do SUI" disponível continua sendo a classificação do
+próprio estudo original (6.118 genes, critério deles: fold change≥2 e
+p<0,05) — usada desde os scripts 14/18/20, que estava correta.
+
+**Números finais (script 24)**:
+- DEG POP (GSE53868, |log2FC|>1, FDR<0,05): **117 genes**
+- DEG SUI (Wei2020, critério do estudo original): **6.118 genes**
+- **Interseção estrita: 15 genes** — `WEE1, SLN, ADAMTS4, NEDD9, NFATC2,
+  NR4A3, SNAI1, IGJ, CSF3, AREG, APOLD1, THBD, ATF3, IGLL1, LDLR` — mesma
+  lista que o script 14 já tinha achado (robusta a essa questão
+  metodológica). **Mesma direção nos dois: só 5 de 15** (SLN, NR4A3,
+  SNAI1, CSF3, ATF3); **10 de 15 em direção oposta**.
+- **GO/KEGG na interseção, com universo CORRIGIDO** (4.797 genes testados
+  nos DOIS arrays — mais correto que o universo do array inteiro do POP
+  usado no script 14): GO BP 69 de 185 termos "significativos", mas quase
+  todos sustentados por **1 gene só** (só 2 termos com 2 genes: *response
+  to cAMP* [AREG/THBD], *positive regulation of peptidyl-tyrosine
+  phosphorylation* [CSF3/AREG]) — mesmo padrão de artefato de gene-único
+  já documentado várias vezes neste projeto. KEGG: **0 de 21
+  significativas**.
+
+**Leitura honesta**: com 15 genes em comum e maioria em direção oposta, a
+interseção estrita não tem poder estatístico para uma história de
+GO/KEGG defensável. Os achados robustos deste projeto (queratinização,
+TGF-beta) vêm de conjuntos maiores (genes concordantes em direção, não a
+interseção estrita) — ver seções 5-6 e 13.
 
 ## Limitações deste ambiente (leia antes de levar os números para a tese)
 
