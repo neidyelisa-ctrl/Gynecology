@@ -56,6 +56,8 @@ resto do repositório.
 | `scripts/22_cruzamento_Chen2003_x_GSE12852_GO_KEGG.R` | Completa a matriz: Chen2003 x GSE12852 | `results/22_*` |
 | `scripts/23_MASTER_resumo_DEG_GO_KEGG_6pares.R` | Consolida os 6 pares POP x SUI, acha vias/termos recorrentes em mais de 1 par — achou o TGF-beta (KEGG 04350) em 4 de 4 pares testáveis | `results/23_*` |
 | `scripts/24_DEG_POP_e_SUI_MESMO_CRITERIO_intersec_GO_KEGG.R` | DEG nos dois arquivos com critério IDÊNTICO, interseção estrita, GO/KEGG com universo corrigido — documenta o problema de circularidade encontrado ao tentar recalcular o DEG do SUI do zero | `results/24_*` |
+| `scripts/25_GSEA_classic_Wei2020_KEGG.R` | GSEA CLÁSSICO (não preranked) do Wei2020, permutação de fenótipo EXAUSTIVA (só 20 combinações possíveis com 3x3) | `results/GSEA_classic_Wei2020_KEGG.csv` |
+| `scripts/26_vias_compartilhadas_GSEA_classico_POP_x_SUI.R` | Vias compartilhadas entre os DOIS GSEA clássicos (POP e SUI), com checagem de direção | `results/26_*` |
 
 Pré-requisitos (scripts 1-4, já resolvidos neste ambiente via `apt`, mas
 seguem os nomes padrão do Bioconductor para quem for rodar em outro lugar):
@@ -669,6 +671,73 @@ interseção estrita não tem poder estatístico para uma história de
 GO/KEGG defensável. Os achados robustos deste projeto (queratinização,
 TGF-beta) vêm de conjuntos maiores (genes concordantes em direção, não a
 interseção estrita) — ver seções 5-6 e 13.
+
+### 15) GSEA CLÁSSICO nos dois lados (não mais preranked) — scripts 25-26
+
+Pedido explícito da usuária, retomando o conselho original do professor:
+GSEA separado no POP e no SUI, procurando vias em comum — desta vez SEM
+usar preranked em nenhum dos dois lados, porque agora temos dado suficiente
+para isso. Isso só ficou possível depois de extrair a intensidade por
+amostra da Tabela S2 do Wei 2020 (`data/wei2020_persample_normalized.csv`,
+script 24) — antes só tínhamos p-valor/fold-change prontos, o que obrigava
+a usar preranked com permutação de rótulo de gene set (mais fraca).
+
+**POP (GSE53868)**: já era GSEA clássico (permutação de fenótipo,
+sign-flip pareado) desde os scripts 02/20 — reaproveitado sem mudança: 218
+vias testadas, 75 sig. FDR<0,05, 94 a FDR<0,25.
+
+**SUI (Wei 2020) — NOVO, script 25**: GSEA clássico de verdade,
+permutação de fenótipo real (embaralhar os rótulos SUI/Ctrl entre as 6
+amostras, recalcular limma e reranquear os 6.118 genes a cada vez).
+
+**⚠️ Limitação estatística inescapável do desenho 3×3 (leia antes de
+interpretar)**: com só 3 SUI e 3 controles, existem exatamente
+choose(6,3) = **20 combinações possíveis** de rotular as 6 amostras em
+dois grupos de 3 — não há como ter mais de 20 permutações distintas,
+não importa quantas vezes se rode. Por isso o script usa permutação
+EXAUSTIVA (todas as 20, não uma amostra aleatória de 1000) — o correto
+estatisticamente aqui. **Consequência direta: o p-valor mínimo possível é
+1/20 = 0,05** — nenhuma via pode, em princípio, cruzar FDR<0,05 com este
+método neste dataset. Isso não é um bug nem uma limitação de poder
+computacional — é uma propriedade matemática de ter só 3 réplicas por
+grupo. Resultado: **83 de 200 vias a FDR<0,25 (todas empatadas no piso de
+p=0,05, FDR=0,133); 0 a FDR<0,05** (estruturalmente impossível, não
+"não achamos").
+
+**Vias compartilhadas (script 26)**:
+
+| Limiar | POP sig. | SUI sig. | Compartilhadas |
+|---|---|---|---|
+| FDR<0,25 | 94 | 83 | **19** |
+| FDR<0,05 | 75 | 0 | **0** (impossível por construção, ver acima) |
+
+Das 19 compartilhadas a FDR<0,25, a direção (sinal do NES) só pôde ser
+comparada em **5** (as outras 14 têm NES=NA de um lado — outro efeito
+colateral do piso de permutação de 20: quando todos os 20 valores
+permutados caem do mesmo lado do zero, a normalização do NES fica
+indefinida). Dessas 5 comparáveis: **2 concordantes** (`00380`
+Tryptophan metabolism; `00760` Nicotinate/nicotinamide metabolism) e
+**3 discordantes** (`00650` Butanoate metabolism; `03010` Ribosome —
+mesmo padrão discordante já visto antes; `04621` NOD-like receptor
+signaling). **`04350` (TGF-beta) aparece nos dois lados a FDR<0,25, mas
+o NES do SUI ficou indefinido (NA)** por esse mesmo efeito de piso — não
+dá para confirmar a direção NESTE teste específico, embora o eixo
+TGF-beta já tenha confirmação robusta de direção por outro método (ORA
+nos genes concordantes, seções 11 e 13, onde não há esse problema de
+resolução).
+
+**Leitura honesta final**: fazer GSEA clássico "de verdade" nos dois
+lados (sem atalho de preranked) não muda a conclusão central do projeto —
+**zero vias compartilhadas ao limiar rigoroso (FDR<0,05)**, e a FDR<0,25 a
+direção é mista quando dá para checar. A causa aqui não é falta de
+convergência biológica, é uma limitação técnica clara e documentável: o
+Wei 2020 só tem 3 réplicas por grupo no array (a maioria dos outros
+datasets deste projeto tem bem mais - 12 pacientes pareadas no GSE53868,
+17 no GSE12852), o que trava o piso de resolução do teste de permutação
+em 0,05 antes mesmo de olhar os dados. **Para GSEA clássico ter poder de
+verdade no lado do SUI, seria preciso um dataset com mais réplicas por
+grupo** — recomendação registrada para se a usuária conseguir tal dataset
+no futuro.
 
 ## Limitações deste ambiente (leia antes de levar os números para a tese)
 
