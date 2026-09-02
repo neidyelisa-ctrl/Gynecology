@@ -427,8 +427,10 @@ report_shared <- function(fdr_cut) {
   n_na <- sum(is.na(out$Same_direction))
   cat("Same direction in both diseases:", sum(out$Same_direction, na.rm = TRUE), "of",
       sum(!is.na(out$Same_direction)), "pathways with a comparable NES on both sides")
-  if (n_na > 0) cat(" (", n_na, "excluded - NES undefined on one side, a known",
-                     "small-sample permutation-floor effect, see the SUI GSEA note above)")
+  if (n_na > 0) cat(" (", n_na, "excluded - NES undefined on at least one side; this is a",
+                     "per-pathway normalization edge case (no permuted ES fell on the same",
+                     "side as the observed one) and is distinct from the SUI sample-size",
+                     "resolution limit discussed above)")
   cat("\n\n")
   out
 }
