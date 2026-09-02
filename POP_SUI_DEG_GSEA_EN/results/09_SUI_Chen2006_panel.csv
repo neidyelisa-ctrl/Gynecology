@@ -1,0 +1,60 @@
+"ProbeSet","GeneDescription","GeneSymbol","Direction","RMA_pvalue","RMA_FoldChange","MAS5_pvalue","MAS5_FoldChange","logFC"
+41469,"Protease inhibitor 3, skin-derived (SKALP)","PI3","up",1e-04,6.6,1e-04,11.3,2.72246602447109
+200753,"Splicing factor, arginine/serine-rich 2","SFRS2","up",0.0172,1.6,0.0029,1.5,0.678071905112638
+201577,"Non-metastatic cells 1, protein (NM23A) expressed in","NME1","up",0.0023,2,1e-04,1.8,1
+202489,"FXYD domain containing ion transport regulator 3","FXYD3","up",0.0217,2.8,0.0168,8.7,1.48542682717024
+202712,"Creatine kinase, mitochondrial 1 (ubiquitous)","CKMT1A","up",0.0098,2.4,0.0111,3,1.26303440583379
+203362,"MAD2 mitotic arrest deficient-like 1 (yeast)","MAD2L1","up",0.0033,1.2,1e-04,2.6,0.263034405833794
+203699,"Deiodinase, iodothyronine, type II","DIO2","up",0.0041,1.6,0.0019,3.5,0.678071905112638
+204170,"CDC28 protein kinase regulatory subunit 2","CKS2","up",0.0036,1.7,0.0091,3.2,0.765534746362977
+204240,"SMC2 structural maintenance of chromosomes 2-like 1 (yeast)","SMC2","up",0.0028,1.4,1e-04,2.2,0.485426827170242
+204268,"S100 calcium binding protein A2","S100A2","up",7e-04,5.9,0.0015,6.2,2.56071495447448
+204602,"Dickkopf homolog 1 (Xenopus laevis)","DKK1","up",0,2.9,6e-04,2.8,1.53605290024021
+204636,"Collagen, type XVII, alpha 1","COL17A1","up",0.0089,2.5,0.0108,5.9,1.32192809488736
+204661,"CDW52 antigen (CAMPATH-1 antigen)","CD52","up",0.0133,1.6,0.0066,4.1,0.678071905112638
+205157,"Keratin 17","KRT17","up",0.0134,5.5,0.002,10.3,2.4594316186373
+205403,"Interleukin 1 receptor, type II","IL1R2","up",0.0095,2.7,0.0163,5.4,1.43295940727611
+205569,"Lysosomal-associated membrane protein 3","LAMP3","up",2e-04,1.5,0,7.1,0.584962500721156
+205724,"Plakophilin 1 (ectodermal dysplasia/skin fragility syndrome)","PKP1","up",0.0044,1.9,0,2.8,0.925999418556223
+205891,"Adenosine A2b receptor","ADORA2B","up",0.0181,1.5,5e-04,2.1,0.584962500721156
+205916,"S100 calcium binding protein A7 (psoriasin 1)","S100A7","up",0.0101,9.9,0.0051,10.7,3.30742852519225
+206034,"Serpin peptidase inhibitor, clade B (ovalbumin), member 8","SERPINB8","up",0.0084,1.4,3e-04,2.4,0.485426827170242
+206561,"Aldo-keto reductase family 1, member B10 (aldose reductase)","AKR1B10","up",0.0066,5.1,0.0082,8.1,2.35049724708413
+208936,"Lectin, galactoside-binding, soluble, 8 (galectin 8)","LGALS8","up",0.0215,1.3,0.0086,1.5,0.37851162325373
+209008,"Keratin 8","KRT8","up",0.0054,1.2,3e-04,2.1,0.263034405833794
+209351,"Keratin 14 (epidermolysis bullosa simplex, Dowling-Meara, Koebner)","KRT14","up",0.006,5.5,0.0137,5,2.4594316186373
+209800,"Keratin 16 (focal non-epidermolytic palmoplantar keratoderma)","KRT16","up",0.0048,5.9,0.0043,6.4,2.56071495447448
+211195,"Tumor protein p73-like","TP63","up",0.0182,1.5,0.0016,1.9,0.584962500721156
+211368,"Caspase 1, apoptosis-related cysteine protease (interleukin 1, beta, convertase)","CASP1","up",0.0221,1.6,2e-04,2.5,0.678071905112638
+212141,"MCM4 minichromosome maintenance deficient 4 (S. cerevisiae)","MCM4","up",0.0102,1.4,0.0029,2.9,0.485426827170242
+212978,"T-cell activation leucine repeat-rich protein","LRRC32","up",0.0116,1.3,0,2,0.37851162325373
+218182,"Claudin 1","CLDN1","up",0.0095,1.4,0.0021,2.9,0.485426827170242
+218567,"Dipeptidylpeptidase 3","DPP3","up",7e-04,1.4,0,3,0.485426827170242
+219148,"T-LAK cell-originated protein kinase","PBK","up",0.0018,1.4,0.0077,5.5,0.485426827170242
+219423,"Tumor necrosis factor receptor superfamily, member 25","TNFRSF25","up",0.0018,1.5,0,2.2,0.584962500721156
+32625,"Natriuretic peptide receptor A/guanylate cyclase A (atrionatriuretic peptide receptor A)","NPR1","down",0.0062,0.8,4e-04,0.3,-0.321928094887362
+200810,"Cold inducible RNA binding protein","CIRBP","down",0.0043,0.7,5e-04,0.7,-0.514573172829758
+201535,"Ubiquitin-like 3","UBL3","down",0.0106,0.6,0,0.5,-0.736965594166206
+201591,"Nischarin","NISCH","down",0.0134,0.7,0.0022,0.6,-0.514573172829758
+202191,"Growth arrest-specific 7","GAS7","down",0.004,0.6,3e-04,0.5,-0.736965594166206
+202598,"S100 calcium-binding protein A13","S100A13","down",0.011,0.8,5e-04,0.7,-0.321928094887362
+202910,"CD97 antigen","ADGRE5","down",0.0038,0.5,0.0043,0.4,-1
+202965,"Calpain 6","CAPN6","down",0.002,0.7,0.0079,0.3,-0.514573172829758
+203221,"Transducin-like enhancer of split 1 (E(sp1) homolog, Drosophila)","TLE1","down",0.0185,0.6,0.0139,0.6,-0.736965594166206
+203319,"Zinc finger protein 148 (pHZ-52)","ZNF148","down",0.0129,0.8,0.0018,0.7,-0.321928094887362
+204131,"Forkhead box O3A","FOXO3","down",2e-04,0.7,0.0013,0.7,-0.514573172829758
+205356,"Ubiquitin specific protease 13 (isopeptidase T-3)","USP13","down",0.0214,0.8,0.0128,0.7,-0.321928094887362
+205902,"Potassium intermediate/small conductance calcium-activated channel, subfamily N, member 3","KCNN3","down",0.0117,0.5,0.0143,0.1,-1
+206631,"Prostaglandin E receptor 2 (subtype EP2), 53 kDa","PTGER2","down",0.02,0.8,0.0015,0.3,-0.321928094887362
+207957,"Protein kinase C, beta 1","PRKCB","down",0.0046,0.7,1e-04,0.3,-0.514573172829758
+208760,"Ubiquitin-conjugating enzyme E2I (UBC9 homolog, yeast)","UBE2I","down",0.0068,0.5,0.0029,0.5,-1
+208806,"Chromodomain helicase DNA-binding protein 3","CHD3","down",0.0039,0.8,0.0143,0.5,-0.321928094887362
+209315,"HBS1-like (S. cerevisiae)","HBS1L","down",0.0161,0.8,0.0042,0.3,-0.321928094887362
+209522,"Carnitine acetyltransferase","CRAT","down",0.0011,0.8,0,0.5,-0.321928094887362
+209728,"Major histocompatibility complex, class II, DR beta 4","HLA-DRB4","down",0.0041,0.6,0.006,0.1,-0.736965594166206
+210632,"Sarcoglycan, alpha (50 kDa dystrophin-associated glycoprotein)","SGCA","down",0.009,0.7,0.0129,0.3,-0.514573172829758
+212197,"Rho interacting protein 3","RHPN2","down",0.0142,0.7,1e-04,0.7,-0.514573172829758
+213348,"Cyclin-dependent kinase inhibitor 1C (p57,KIP2)","CDKN1C","down",0.0066,0.6,9e-04,0.6,-0.736965594166206
+215543,"Like-glycosyltransferase","LARGE1","down",0.0182,0.7,6e-04,0.5,-0.514573172829758
+217946,"SUMO-1 activating enzyme subunit 1","SAE1","down",0.0117,0.8,1e-04,0.8,-0.321928094887362
+219477,"Thrombospondin, type I, domain 1","THSD1","down",3e-04,0.7,0.0162,0.4,-0.514573172829758
