@@ -1,17 +1,48 @@
 # POP vs SUI: DEG, GSEA, and Shared-Pathway Analysis (English)
 
 Self-contained, English-language deliverable comparing gene expression in
-Pelvic Organ Prolapse (POP) and Stress Urinary Incontinence (SUI). One
-script, top to bottom: DEG for both conditions, GSEA for both, shared
-pathways with a gene-level direction table, and every figure needed to
-support the analysis.
+Pelvic Organ Prolapse (POP) and Stress Urinary Incontinence (SUI), across
+**two independent POP datasets and two measurement technologies**
+(microarray and RNA-seq) against the same SUI source.
 
-**Run this:** `scripts/POP_SUI_analysis.R` (open it in RStudio, set the
-working directory to this folder, run top to bottom). It needs no internet
-access at run time and produces everything in `results/` and `figures/`.
+**Run these, in order:**
+1. `scripts/POP_SUI_analysis.R` - POP (GSE53868, microarray) vs SUI (Wei
+   2020). DEG for both, GSEA for both, shared pathways with a gene-level
+   direction table, every figure. ~9 minutes (mostly the 500 POP-GSEA
+   permutations).
+2. `scripts/02_GSE208261_POP_RNAseq_vs_SUI.R` - the same design, but with a
+   **second, RNA-seq POP dataset** (GSE208261) instead of the microarray
+   one, replicating the whole pipeline independently. ~20 minutes (mostly
+   its own 500 permutations - RNA-seq's voom+limma fit is refit per
+   permutation, which is slower per-iteration than the microarray script's
+   in-memory t-statistic).
 
-Runtime: about 9 minutes total, almost all of it the 500 permutations for
-the POP classic GSEA (Step 3).
+Both scripts need no internet access at run time and are fully standalone
+(script 2 does not depend on script 1 having been run first). Everything
+lands in `results/` and `figures/` (figures are numbered 01-09 for script 1,
+10-14 for script 2, so nothing gets overwritten).
+
+## Mixing microarray and RNA-seq - is that valid?
+
+**Yes, done the way this project does it.** What is NOT valid is pooling
+raw expression values from the two technologies into one matrix and
+treating them as replicates of a single experiment - microarray measures
+hybridization intensity (limited dynamic range, saturates) while RNA-seq
+measures read counts (wider range, different mean-variance relationship);
+merging them without heavy, imperfect correction produces artifacts.
+
+What this project always does instead - for every dataset, not just
+GSE208261 - is analyze each one **entirely on its own**, with the
+statistical method appropriate to its own technology (`limma` directly on
+log-intensities for microarray; `edgeR` + `voom` + `limma` for RNA-seq
+counts), and only compare the **derived results** (which genes/pathways are
+significant, and in which direction) across datasets at the end. Raw
+values are never pooled. This is standard cross-platform replication
+practice in genomics, and it is exactly what already happened across the
+three different microarray platforms used elsewhere in this project
+(GSE53868/Agilent, GSE12852/Applied Biosystems, Wei2020/Arraystar) before
+RNA-seq was ever added - GSE208261 is simply one more independently
+analyzed source, not a new category of risk.
 
 ## Datasets
 
@@ -174,3 +205,105 @@ are a plausible explanation, discussed further below.
   hormonal status between the two source studies rather than an absence
   of a POP-SUI relationship. This is worth discussing explicitly rather
   than treated as a negative result.
+
+## Script 2: GSE208261 (POP, RNA-seq) vs SUI - a second, independent POP source
+
+### Dataset and a data-quality issue found while preparing it
+
+`data/GSE208261_raw_counts.tsv` + `data/GSE208261_sample_metadata.csv` -
+24 RNA-seq samples (anterior vaginal wall and uterosacral ligament, POP vs
+continent controls), metadata extracted from the submitters' own
+`family.soft` file.
+
+**The sample names are misleading.** `Control_D1-6`/`Control_Y1-6` and
+`POP_D1-6`/`POP_Y1-6` suggest a tissue split (D/Y) within *both* groups,
+but the actual GEO metadata shows this is true only for the controls
+(D = uterosacral ligaments, Y = anterior vaginal wall) - **all 12 POP
+samples, both "_D" and "_Y", are anterior vaginal wall**; there is no
+POP-side ligament group at all, and the real meaning of "_D"/"_Y" within
+the POP arm is never stated. Consequence: the only tissue-matched, valid
+comparison is **6 controls vs 12 POP, both anterior vaginal wall** (the
+6 ligament-control samples are excluded - they have no POP counterpart).
+This tissue (anterior vaginal wall) is the same as GSE53868's and the
+closest match of any POP dataset in this project to Wei2020's periurethral
+vaginal wall.
+
+A related quality issue: the 6 "POP_D" samples were sequenced notably
+shallower (6.4-24.3 million reads, several under 13M) than the rest
+(19-24M), a likely batch effect unrelated to disease status. TMM
+normalization (`edgeR::calcNormFactors`) corrects for this before testing.
+
+### 1) DEG - a genuine null result
+
+**0 DEGs** (|log2FC|>1, FDR<0.05) of 24,053 genes tested after
+`filterByExpr` + TMM + voom. Minimum FDR reached: 0.97. Genes at raw
+p<0.05: 903/24,053 (3.8%) - **at or below the ~5% expected by chance
+alone**. This is a genuine result, not a bug: properly normalized, this
+specific 6-vs-12 comparison shows no detectable single-gene signal, likely
+reflecting some combination of real biological absence of a strong
+effect and the uneven sequencing depth noted above adding noise.
+**Do not read this as "GSE208261 shows nothing"** - see the GSEA result
+next, which tells a very different story.
+`results/06_POP_GSE208261_DEG_logFC1_FDR05.csv` (empty),
+full ranked table in `results/06_POP_GSE208261_voom_limma_full.csv`.
+
+### 2) GSEA - strong coordinated signal despite zero individual DEGs
+
+**Classic GSEA** (phenotype/group-label permutation, 500 permutations -
+feasible here because 6-vs-12 unpaired gives `choose(18,6) = 18,564`
+possible relabelings, no resolution ceiling like SUI's 3-vs-3 design).
+216 KEGG pathways tested: **122 significant at FDR<0.25; 115 at FDR<0.05**
+- far more than the microarray POP dataset (75) despite the complete
+absence of individual DEGs. This is precisely the scenario GSEA exists
+for (Subramanian et al. 2005): many genes shifting together by a small
+amount, invisible to a single-gene test, detectable in aggregate.
+`results/07_GSEA_classic_POP_GSE208261_KEGG.csv`.
+
+### 3) Shared pathways with SUI - the strongest cross-disease result in this project
+
+| Threshold | POP (GSE208261) significant | SUI significant | **Shared** |
+|---|---|---|---|
+| FDR<0.25 | 122 | 50 | **25** |
+| FDR<0.05 | 115 | 0 | **0** (SUI has none at this threshold) |
+
+Of the 25 shared pathways at FDR<0.25, direction was comparable on both
+sides for 18 (7 excluded - NES undefined on one side, the same
+per-pathway permutation-distribution edge case documented in script 1).
+**15 of 18 (83%) are direction-concordant** - a much stronger agreement
+than the microarray-POP-vs-SUI comparison (2 of 7, 29%). The concordant
+pathways include several that are directly, mechanistically relevant to
+pelvic floor connective tissue: **Focal adhesion, ECM-receptor
+interaction, Adherens junction, Regulation of actin cytoskeleton, Wnt
+signaling pathway** - all consistently *down* in both POP and SUI.
+`results/08_shared_pathways_GSE208261xSUI_FDR025.csv`,
+`figures/13_shared_pathways_NES_comparison_GSE208261.png`.
+
+**Gene level**: of 859 genes in these 25 shared pathways tested in both
+diseases, **470 (54.7%) are direction-concordant** - above 50%, and above
+the microarray-POP comparison's 40.9%.
+`results/08_shared_pathways_gene_direction_table.csv`,
+`figures/14_gene_direction_heatmap_GSE208261xSUI.png`.
+
+**Honest reading for the thesis**: this is the most encouraging
+cross-disease result in the whole project - a second, independent,
+RNA-seq POP dataset, in the *same tissue* as SUI's comparison partner,
+shows majority-concordant direction with SUI both at the pathway level
+(83%) and the gene level (55%), concentrated in ECM/cell-adhesion
+pathways that are mechanistically exactly what you would expect if POP
+and SUI share connective-tissue pathophysiology. It does not contradict
+the earlier, weaker/discordant result from the microarray POP dataset
+(GSE53868) - it complements it: two different POP cohorts, measured with
+two different technologies, give two different (but not contradictory)
+answers, which is itself useful information about how population/dataset-
+dependent this kind of comparison is. Report both, side by side, rather
+than picking the more favorable one.
+
+### Figures (script 2)
+
+| File | Shows |
+|---|---|
+| `10_volcano_POP_GSE208261.png` | Volcano plot, POP RNA-seq (no FDR<0.05 hits; points at raw p<0.05 for context) |
+| `11_heatmap_top_POP_GSE208261.png` | Heatmap of the top 40 genes by p-value (log-CPM z-score) |
+| `12_GSEA_barplot_POP_GSE208261.png` | Top 15 POP KEGG pathways by NES (classic GSEA) |
+| `13_shared_pathways_NES_comparison_GSE208261.png` | NES in POP (GSE208261) vs NES in SUI for the 18 comparable shared pathways |
+| `14_gene_direction_heatmap_GSE208261xSUI.png` | Direction (fill) and log2FC (text) per gene, shared-pathway genes tested in both diseases |
