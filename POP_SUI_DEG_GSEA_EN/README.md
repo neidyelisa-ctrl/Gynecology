@@ -746,6 +746,44 @@ Two further steps were attempted and are **not feasible in this environment** - 
 1. **PPI/hub genes**: go to [string-db.org](https://string-db.org) (multiple proteins search), paste the gene list in `results/25_concordant_genes_for_STRING.txt` (189 genes, direction-concordant between POP and SUI across shared pathways) or `results/26_top_DEG_genes_for_STRING.txt` (163 genes, the full 12x12 POP DEG list), organism *Homo sapiens*, confidence >=0.4 - export the network, then rank nodes by degree or betweenness (STRING's own site does this, or open the exported network in Cytoscape with the cytoHubba plugin for MCC/degree/betweenness hub scores).
 2. **miRNA-mRNA network**: first download the actual miRNA-seq count matrix for GSE208264 from its GEO page (Supplementary files, not just the `family.soft` metadata already provided) and send it over so the same DESeq2 pipeline used throughout this project can be applied to it. Separately/in parallel, install `multiMiR` (`BiocManager::install("multiMiR")`) or use [TargetScanHuman](https://www.targetscan.org/vert_80/) directly to predict targets of the differentially expressed miRNAs, then intersect predicted targets with the concordant gene list above to build the network (e.g., visualized in Cytoscape).
 
+## STRING results (run externally, analyzed here) - PPI hub genes and enrichment
+
+The 189 concordant genes (`results/25_concordant_genes_for_STRING.txt`) were submitted to string-db.org outside this environment; the exported network and four enrichment tables were analyzed here. Raw exports are kept in `data/string_export/` for reproducibility (`string_interactions.tsv`, `enrichment.KEGG.tsv`, `enrichment.Process.tsv`, `enrichment.Function.tsv`, `enrichment.TISSUES.tsv`).
+
+### Hub genes (by network degree)
+
+`results/27_STRING_hub_genes_degree.csv` counts, for each gene, how many of the other 188 concordant genes it has a scored interaction with in STRING's network (confidence-filtered "short" export). Top 11:
+
+| Gene | Degree | Role |
+|---|---|---|
+| CDC42 | 68 | Rho-family GTPase, actin cytoskeleton master regulator |
+| RHOA | 66 | Rho-family GTPase, actin/stress fiber, cell contractility |
+| MAPK3 (ERK1) | 61 | Core MAPK signaling |
+| FN1 | 55 | Fibronectin, ECM structural glycoprotein |
+| PIK3R1 | 52 | PI3K regulatory subunit |
+| RAC1 | 47 | Rho-family GTPase, lamellipodia/migration |
+| PRKACA | 45 | PKA catalytic subunit |
+| PTPN11 (SHP2) | 40 | Signaling phosphatase, growth factor pathways |
+| ROCK1 | 38 | RHO-activated kinase, actomyosin contractility |
+| ITGB1 | 37 | Integrin beta-1, ECM-cell adhesion receptor |
+| IQGAP1 | 37 | Actin/Rho-GTPase scaffold |
+
+**Reading this**: three Rho-family GTPases (CDC42, RHOA, RAC1) plus their direct effectors (ROCK1, IQGAP1) dominate the hub list - this is a genuinely independent line of evidence (STRING's interaction database, not this project's own KEGG/GSEA pipeline) converging on the same axis this project has found repeatedly since script 2: actin cytoskeleton / focal adhesion / ECM machinery as the connective thread between POP and SUI. FN1 and ITGB1 anchor this to the ECM-receptor side specifically. These are reasonable candidates to name explicitly as "hub genes" in the thesis, with the caveat below.
+
+### Pathway/function enrichment (STRING, independent of this project's offline KEGG pipeline)
+
+Top KEGG terms (`enrichment.KEGG.tsv`, ranked by FDR): **Regulation of actin cytoskeleton** (45/189 genes, FDR 5.8e-42), **Focal adhesion** (36 genes, FDR 1.7e-31), Fc gamma R-mediated phagocytosis, **Oxidative phosphorylation** (27 genes, FDR 7.3e-25), Ras signaling, **Adherens junction** (13 genes, FDR 7.8e-12), Wnt signaling, T cell receptor signaling, B cell receptor signaling - plus several generic disease categories ("Pathways in cancer," "Hepatocellular carcinoma," various leukemias) that appear because these are broadly-reused signaling/cytoskeleton genes annotated in many KEGG disease maps, not evidence of malignancy relevance.
+
+Top GO Biological Process terms (`enrichment.Process.tsv`) go further than the KEGG-only picture used elsewhere in this project and directly support the connective-tissue narrative: **actin cytoskeleton organization** (33 genes, FDR 5.9e-14), **regulation of cell adhesion** (36 genes, FDR 3.8e-12), **cell-matrix adhesion**, **response to wounding** (24 genes, FDR 3.1e-9), **wound healing** (19 genes, FDR 1.5e-7), **cell junction organization/assembly**, **epithelial cell migration**, **epithelial-to-mesenchymal transition** - a coherent wound-healing/connective-tissue-remodeling signature, plus a separate **oxidative phosphorylation/electron transport chain** cluster (consistent with the metabolic theme seen in the GSE267852 VFB analysis, script 4).
+
+Top GO Molecular Function terms (`enrichment.Function.tsv`): mostly generic protein/enzyme/kinase binding terms (expected for a signaling-heavy gene set) plus a specific **integrin binding** (GO:0005178, 11 genes) and **cell adhesion molecule binding** (GO:0050839, 23 genes) signal, reinforcing the ECM-adhesion axis independently of the KEGG result above.
+
+TISSUES enrichment (`enrichment.TISSUES.tsv`): mostly broad/ubiquitous categories (liver, whole body, various leukemia cell lines, nervous system) - expected, since cytoskeleton/signaling genes are expressed almost everywhere, and **not** meaningful evidence of pelvic-tissue specificity on its own. One term is a direct, relevant exception worth citing: **BTO:0003099 "Internal female genital organ"** (71/189 genes, FDR 8.3e-13) - a genuine anatomical anchor for this gene set, even if the rest of the TISSUES list is not informative.
+
+### Honest reading for the thesis
+
+This STRING analysis is a **partially circular but still informative check**: the 189-gene input list was itself built from KEGG-pathway concordance between POP and SUI (this project's own GSEA), so KEGG re-finding "actin cytoskeleton"/"focal adhesion" in the same gene set is expected, not a fully independent replication. What **is** genuinely new and independent here: (1) the GO Biological Process enrichment (wound healing, cell-matrix adhesion, EMT) uses a different, more granular ontology than the KEGG pathways used throughout this project, and lands on the same biological theme by a different route; (2) the PPI network topology (which genes are hubs) is external data (protein-interaction evidence, not co-expression or pathway co-membership) and identifies CDC42/RHOA/RAC1/ROCK1/IQGAP1 as a converging mechanistic core that this project's own pipeline had no way to surface. Reporting the hub genes as "candidates for a mechanistic follow-up" (e.g., the ROC/qPCR next steps in script 8's honest-caveats framing) is defensible; reporting them as "validated disease drivers" would not be, without functional follow-up.
+
 ## Script 6: GSE208261, balanced 6-vs-6 vaginal wall (does it fix the confound?) - no, it reveals a worse problem
 
 **Run this:** `scripts/06_GSE208261_6v6_vaginalwall_vs_SUI.R`. Fully
