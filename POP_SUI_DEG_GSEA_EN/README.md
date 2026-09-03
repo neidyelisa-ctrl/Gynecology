@@ -30,12 +30,18 @@ technologies** (microarray and RNA-seq).
    any other script's code or saved results) and includes a direct,
    quantitative test of whether including them is confounded by tissue
    type. Fully standalone. ~13 minutes.
+6. `scripts/06_GSE208261_6v6_vaginalwall_vs_SUI.R` - a second sensitivity
+   check on script 2: does a perfectly balanced, tissue-confound-free
+   6-vs-6 (Control vs each of GSE208261's two POP halves, POP_Y and
+   POP_D) do better than script 2's 6-vs-12? Answer: no - it uncovers a
+   worse, previously hidden problem (see below). Fully standalone. ~18-20
+   minutes (two full GSEA runs).
 
-All five scripts need no internet access at run time. Scripts 1, 2, 4 and
-5 are fully standalone; script 3 depends only on script 2's saved
+All six scripts need no internet access at run time. Scripts 1, 2, 4, 5
+and 6 are fully standalone; script 3 depends only on script 2's saved
 results, not on script 1. Everything lands in `results/` and `figures/`
 (figures are numbered 01-09/script 1, 10-14/script 2, 15-18/script 3,
-19-23/script 4, 24-27/script 5, so nothing gets
+19-23/script 4, 24-27/script 5, 28-31/script 6, so nothing gets
 overwritten).
 
 ## Mixing microarray and RNA-seq - is that valid?
@@ -686,3 +692,131 @@ methods section than silently using either result alone.
 | `25_PCA_tissue_vs_disease_GSE208261.png` | **The key diagnostic**: all 24 samples, colored by tissue, shaped by disease status - shows POP/Control separates more than tissue does |
 | `26_GSEA_barplot_POP_GSE208261_FULL24.png` | Top 15 POP KEGG pathways by NES (classic GSEA, naive 12v12 ranking) |
 | `27_shared_pathways_NES_comparison_GSE208261_FULL24.png` | NES in POP (FULL24) vs NES in SUI for the 12 comparable shared pathways |
+
+## Script 6: GSE208261, balanced 6-vs-6 vaginal wall (does it fix the confound?) - no, it reveals a worse problem
+
+**Run this:** `scripts/06_GSE208261_6v6_vaginalwall_vs_SUI.R`. Fully
+standalone, written fresh. ~18-20 minutes (two full 500-permutation GSEA
+runs).
+
+### The question this script answers
+
+Script 5 showed the ligament-vs-vaginal-wall tissue confound is real but
+only partially explains script 2's result. A natural next question: does
+using a **perfectly balanced 6-vs-6 vaginal-wall-only** comparison (no
+tissue confound at all, unlike script 5, and no group-size imbalance,
+unlike script 2's 6-vs-12) give a cleaner result?
+
+The obstacle: GSE208261's 12 POP vaginal-wall samples are split into two
+labeled halves, `POP_Y1-6` and `POP_D1-6`. The metadata never explains
+what "_Y"/"_D" mean within the POP arm (recall this label means *tissue*
+in the Control arm, but *all* POP samples are vaginal wall - so within
+POP it must mean something else, unstated). Neither half has any
+principled claim to being "the more correct" 6 - so this script ran the
+6-vs-6 test **twice**, once against each half, treating both as equally
+valid a priori.
+
+### Results: the two halves disagree with each other more than either agrees with SUI
+
+**DEG** (DESeq2, primary method throughout):
+
+| Comparison | Genes tested | DEG (\|log2FC\|>1, FDR<0.05) | Min. FDR |
+|---|---|---|---|
+| 6 Control_Y vs 6 POP_Y | ~24,700 | **2,449** (862 up / 1,587 down) | 7.4×10⁻⁸ |
+| 6 Control_Y vs 6 POP_D | ~24,700 | **176** (47 up / 129 down) | 1.1×10⁻⁵ |
+
+Both use the exact same 6 controls; only the POP half changes. A 14-fold
+difference in DEG count between two allegedly-equivalent halves of the
+same 12 POP samples is not sampling noise - it is a sign the "_Y"/"_D"
+POP split tracks something systematic (most likely the sequencing-depth
+batch effect already documented for POP_D in script 2: 6.4-24.3M reads,
+several under 13M, versus 19-24M elsewhere - TMM normalization reduces
+but does not eliminate this).
+
+**Only 22 genes appear in both DEG lists**, and of those 22, only **3
+(14%) agree on direction** - i.e., among the genes both halves agree are
+significant, most disagree on whether they go up or down. This is worse
+than chance-level agreement between two supposedly-replicate subsets of
+the same disease group, and is the clearest single piece of evidence in
+this project that POP_Y and POP_D are not interchangeable.
+`results/20_POP_GSE208261_6v6_POPY_DESeq2_full.csv`,
+`results/20_POP_GSE208261_6v6_POPY_DEG.csv`,
+`results/20_POP_GSE208261_6v6_POPD_DESeq2_full.csv`,
+`results/20_POP_GSE208261_6v6_POPD_DEG.csv`.
+
+**GSEA** (classic, phenotype permutation, 500 permutations, balanced 6-vs-6,
+`choose(12,6)=924` relabelings):
+
+| Comparison | Pathways tested | Sig. FDR<0.25 | Sig. FDR<0.05 |
+|---|---|---|---|
+| POP_Y half | 218 | 75 | 51 |
+| POP_D half | 217 | 173 | 164 |
+
+POP_D produces more than twice as many significant pathways as POP_Y from
+the same 6 controls - consistent with the DEG-level divergence above, not
+an independent artifact.
+`results/21_GSEA_classic_POP_GSE208261_6v6_POPY_KEGG.csv`,
+`results/21_GSEA_classic_POP_GSE208261_6v6_POPD_KEGG.csv`.
+
+**Top genes differ, and even the theme differs**: POP_Y's top DEGs
+continue this project's ECM/keratinization theme (TGM3, COMP up -
+consistent with scripts 2/3). POP_D's top DEGs are dominated by
+**keratins going the opposite direction** - KRT5, KRT13, KRT14, S100A8,
+SFN, DSP, TRIM29 all *down* - the reverse of the keratinization-up
+pattern found elsewhere in this project. Taken with the sequencing-depth
+issue, this looks like a batch/technical signature more than a second
+biological subtype of POP, but the data here cannot fully distinguish the
+two explanations.
+
+### Shared pathways with SUI: superficially fine, actually just small-N luck
+
+| Threshold (FDR<0.25) | Shared with SUI | Comparable (NES defined both sides) | Concordant |
+|---|---|---|---|
+| POP_Y half | 6 | 3 | **3/3 (100%)** |
+| POP_D half | 45 | 34 | **16/34 (47%)** |
+
+POP_Y's "100% concordant" looks like the best result in the whole
+project - until you notice it is only 3 pathways, too few to mean
+anything (`choose(3,...)` gives no real statistical power; 3/3 by chance
+alone is not rare). POP_D, with a much larger and more stable comparable
+set (34 pathways), lands at 47% - essentially coin-flip level, similar to
+the weakest results in this project (VFB, script 4: 12.5%) rather than
+script 2's strong 83%. **Neither half reproduces script 2's headline
+result**; POP_Y trivially "succeeds" only because its N is too small to
+fail.
+`results/22_shared_pathways_6v6_POPY_FDR025.csv`,
+`results/22_shared_pathways_6v6_POPD_FDR025.csv`,
+`figures/30_shared_pathways_6v6_POPY.png`,
+`figures/31_shared_pathways_6v6_POPD.png`.
+
+### Honest answer to "does 6v6 help mitigate the problem?"
+
+**No - it does not fix the tissue confound, and it uncovers a bigger,
+separate problem.** Splitting POP into a clean 6-vs-6 does remove the
+Control-side tissue confound from script 5. But it exposes something
+worse: the 12 POP samples themselves are not internally consistent
+enough to be split in half reliably - whichever 6 you pick changes the
+DEG count by 14x and the GSEA pathway count by >2x, and the two halves
+barely overlap in *which* genes they call significant, let alone agree
+on direction for those they share. A comparison this unstable to which 6
+of 12 samples you happen to keep is not more trustworthy than script 2's
+full 12-sample comparison - it is less trustworthy, because it throws
+away exactly the averaging-over-heterogeneity that makes the full-12
+comparison more stable in the first place.
+
+**Recommendation for the thesis: do not use either 6-vs-6 half as a
+result.** Keep script 2 (6 controls vs the full 12 POP samples) as the
+primary GSE208261 analysis, exactly as before. Report this script only as
+evidence *of* the POP_Y/POP_D instability - it is useful as a limitation
+to disclose (a caveat about intra-cohort heterogeneity or batch effects
+within GSE208261's POP arm), not as an alternative result to cite
+alongside script 2's numbers.
+
+### Figures (script 6)
+
+| File | Shows |
+|---|---|
+| `28_GSEA_barplot_POP_GSE208261_6v6_POPY.png` | Top 15 KEGG pathways by NES, 6 Control_Y vs 6 POP_Y |
+| `29_GSEA_barplot_POP_GSE208261_6v6_POPD.png` | Top 15 KEGG pathways by NES, 6 Control_Y vs 6 POP_D - note the much larger NES magnitudes and the Oxidative phosphorylation top hit, both atypical for this project's tissue-biopsy POP datasets |
+| `30_shared_pathways_6v6_POPY.png` | NES in POP_Y vs NES in SUI, 3 comparable pathways - all concordant, but too few to be meaningful |
+| `31_shared_pathways_6v6_POPD.png` | NES in POP_D vs NES in SUI, 34 comparable pathways - only 47% concordant |
