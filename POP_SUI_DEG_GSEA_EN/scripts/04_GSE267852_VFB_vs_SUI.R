@@ -46,40 +46,12 @@ library(ggrepel)
 dir.create("results", showWarnings = FALSE)
 dir.create("figures", showWarnings = FALSE)
 
-kegg_names <- c(
-  "00190"="Oxidative phosphorylation","01100"="Metabolic pathways",
-  "03010"="Ribosome","03013"="RNA transport","03015"="mRNA surveillance pathway",
-  "03018"="RNA degradation","03020"="RNA polymerase","03022"="Basal transcription factors",
-  "03030"="DNA replication","03040"="Spliceosome","03050"="Proteasome",
-  "03060"="Protein export","03320"="PPAR signaling pathway",
-  "04010"="MAPK signaling pathway","04012"="ErbB signaling pathway",
-  "04020"="Calcium signaling pathway","04060"="Cytokine-cytokine receptor interaction",
-  "04062"="Chemokine signaling pathway","04066"="HIF-1 signaling pathway",
-  "04068"="FoxO signaling pathway","04110"="Cell cycle",
-  "04115"="p53 signaling pathway","04120"="Ubiquitin mediated proteolysis",
-  "04140"="Autophagy","04141"="Protein processing in endoplasmic reticulum",
-  "04142"="Lysosome","04144"="Endocytosis","04145"="Phagosome",
-  "04150"="mTOR signaling pathway","04151"="PI3K-Akt signaling pathway",
-  "04210"="Apoptosis","04310"="Wnt signaling pathway",
-  "04330"="Notch signaling pathway","04340"="Hedgehog signaling pathway",
-  "04350"="TGF-beta signaling pathway","04370"="VEGF signaling pathway",
-  "04510"="Focal adhesion","04512"="ECM-receptor interaction",
-  "04520"="Adherens junction","04530"="Tight junction","04540"="Gap junction",
-  "04610"="Complement and coagulation cascades","04620"="Toll-like receptor signaling pathway",
-  "04621"="NOD-like receptor signaling pathway","04630"="JAK-STAT signaling pathway",
-  "04660"="T cell receptor signaling pathway","04662"="B cell receptor signaling pathway",
-  "04664"="Fc epsilon RI signaling pathway","04670"="Leukocyte transendothelial migration",
-  "04810"="Regulation of actin cytoskeleton","04910"="Insulin signaling pathway",
-  "04914"="Progesterone-mediated oocyte maturation","05010"="Alzheimer disease",
-  "05012"="Parkinson disease","05014"="Amyotrophic lateral sclerosis",
-  "05016"="Huntington disease","05020"="Prion diseases","05140"="Leishmaniasis",
-  "05142"="Chagas disease (American trypanosomiasis)","05144"="Malaria",
-  "05145"="Toxoplasmosis","05146"="Amoebiasis","05160"="Hepatitis C",
-  "05161"="Hepatitis B","05164"="Influenza A","05166"="HTLV-I infection",
-  "05169"="Epstein-Barr virus infection","05200"="Pathways in cancer",
-  "05203"="Viral carcinogenesis","05205"="Proteoglycans in cancer",
-  "05219"="Bladder cancer","05222"="Small cell lung cancer",
-  "05223"="Non-small cell lung cancer")
+# Full KEGG pathway ID -> name lookup, loaded from the shared, audited table
+# data/kegg_pathway_names.csv (223 IDs covering every pathway used anywhere
+# in this project) instead of a per-script partial dict - one source of
+# truth so every figure across every script names the same ID the same way.
+kegg_tab <- read.csv("data/kegg_pathway_names.csv", colClasses = c("character", "character"))
+kegg_names <- setNames(kegg_tab$Name, kegg_tab$PATH5)
 kegg_label <- function(id) {
   nm <- kegg_names[id]
   ifelse(is.na(nm), paste0("KEGG ", id), paste0("KEGG ", id, " - ", nm))

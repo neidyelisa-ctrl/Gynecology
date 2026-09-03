@@ -693,6 +693,59 @@ methods section than silently using either result alone.
 | `26_GSEA_barplot_POP_GSE208261_FULL24.png` | Top 15 POP KEGG pathways by NES (classic GSEA, naive 12v12 ranking) |
 | `27_shared_pathways_NES_comparison_GSE208261_FULL24.png` | NES in POP (FULL24) vs NES in SUI for the 12 comparable shared pathways |
 
+## Data-quality guarantees (read this before citing any DEG number)
+
+Two specific concerns were checked directly against the code, not just asserted, after a user report that a different tool had skipped the low-count filter before running DESeq2 (which inflates the multiple-testing correction and can change which genes come out significant):
+
+**Low-count filtering before every DESeq2 call.** All four scripts that run DESeq2 filter low-count genes out of the count matrix *before* calling `DESeq()`, matching the tool's own documented recommendation:
+
+| Script | Design | Filter (exact code) |
+|---|---|---|
+| 02 (6v12) | 6 Control vs 12 POP | `dds[rowSums(counts(dds) >= 10) >= 6, ]` |
+| 04 (VFB 6v6) | 6 Control vs 6 POP | `dds[rowSums(counts(dds) >= 10) >= 6, ]` |
+| 05 (naive 12v12) | 12 Control vs 12 POP | `dds[rowSums(counts(dds) >= 10) >= 12, ]` |
+| 05 (tissue-adj 12v12) | 12 Control vs 12 POP | `dds[rowSums(counts(dds) >= 10) >= 12, ]` |
+| 06 (6v6 POP_Y / POP_D) | 6 Control vs 6 POP | `dds[rowSums(counts(dds) >= 10) >= 6, ]` |
+
+The rule in every case is "count >= 10 in at least as many samples as the smaller group" - the standard DESeq2-recommended filter. The two secondary edgeR+voom+limma pipelines (used only to cross-check DEG calls and to rank genes for GSEA, never as the primary DEG method) use `edgeR::filterByExpr()`, that ecosystem's own equivalent filter, for the same reason. Neither filter was ever skipped in any script in this project.
+
+**Full KEGG pathway names, not just numeric IDs.** Every figure and results table now shows the pathway's real name (e.g. "KEGG 04512 - ECM-receptor interaction"), not a bare ID. This is driven by `data/kegg_pathway_names.csv`, a single 223-row table covering every KEGG pathway ID that appears anywhere in this project's results, assembled from standard KEGG pathway-map nomenclature (this environment has no live internet access to KEGG.jp - confirmed by direct test, `curl` to `string-db.org`, `bioconductor.org`, and `targetscan.org` all return a proxy-level connection refusal, not a slow/failed request). All six analysis scripts (`POP_SUI_analysis.R`, `02`-`06`) now load this one shared table instead of each keeping its own partial, inconsistent copy - one source of truth instead of six chances to disagree. `scripts/relabel_KEGG_pathways.R` re-applies the table to every already-saved results file and redraws the affected figures **without recomputing any statistic** (NES, p-values, FDR, DEG calls are untouched - only the human-readable name changes); run it any time the name table is edited, instead of re-running a 10-20 minute permutation loop.
+
+## Script 8: candidate biomarker screen (ROC/AUC) - and what could not be done offline
+
+Following up on "can the genes help with an analytical next step?", two things were explored.
+
+### What was done: single-gene and 5-gene-panel ROC/AUC (fully offline, no new data needed)
+
+**Run this:** `scripts/08_ROC_biomarker_candidates.R`. Re-derives the exact same 12-Control-vs-12-POP DESeq2 model as script 05 (identical filtering, identical design) and checks its output against script 05's saved result before proceeding, so the candidate genes come from an already-reported, reproducible DEG list, not a separately re-tuned model.
+
+Candidates are the top 10 significant (FDR<0.05, |log2FC|>1), named protein-coding genes from the 12x12 DEG list (26 of the 163 significant DEGs were excluded as non-coding-RNA symbols - `RNU`/`MIR`/`LINC`/`LOC`/`SNOR` prefixes - not biologically interpretable as a protein biomarker). AUC is computed exactly (the Mann-Whitney-U / AUC equivalence, Hanley & McNeil 1982), not approximated.
+
+| Gene | log2FC | FDR | AUC (single gene, in-sample) |
+|---|---|---|---|
+| RGS5 | -1.93 | 0.0044 | 0.875 |
+| SMOC1 | -2.92 | 0.0026 | 0.861 |
+| VSIG10L | +2.68 | 0.0019 | 0.847 |
+| UPK1A | +2.90 | 0.0022 | 0.840 |
+| POU3F1 | +2.28 | 0.0033 | 0.840 |
+| IGLON5 | +2.59 | 0.0038 | 0.819 |
+
+**Combined 5-gene panel** (RGS5, SMOC1, VSIG10L, UPK1A, POU3F1 - signed z-score average): in-sample AUC 0.917; leave-one-out cross-validated AUC 0.917 (identical here, a small-n coincidence, not a general guarantee). **Read this as an exploratory screen, not a validated biomarker result**: n=24, the gene list itself was chosen using all 24 samples before any cross-validation was applied (only the panel *score's* standardization is left-one-out, not the gene *selection* - a caveat printed directly in the script's own output), and there is no independent replication cohort. The honest use of this result is "worth following up with qPCR validation on an independent cohort," not "these AUCs are the biomarker's true performance."
+`results/23_ROC_AUC_candidate_genes.csv`, `results/24_ROC_panel_summary.csv`,
+`figures/32_ROC_curves_candidate_genes.png`, `figures/33_ROC_panel_score.png`.
+
+### What could not be done offline: PPI hub genes and a miRNA-mRNA network
+
+Two further steps were attempted and are **not feasible in this environment** - confirmed by direct test, not assumed:
+
+- **Protein-protein interaction (PPI) hub genes via STRING**: `r-bioc-stringdb` installs via apt, but every one of its functions (`get_proteins()`, `get_interactions()`, etc.) makes a live call to `string-db.org` to fetch the network - there is no offline/bundled copy. Direct test: `STRINGdb$new()$get_proteins()` fails with `cannot open the connection to 'https://string-db.org/api/...'`; a raw `curl` to `string-db.org` is refused by this environment's egress proxy (`CONNECT tunnel failed, response 403`) before it even reaches STRING's servers.
+- **miRNA-mRNA regulatory network using the GSE208264 companion data**: needs a target-prediction database (TargetScan or miRTarBase). `curl` to `targetscan.org` fails the same way; no offline equivalent is available via apt for this species/database. Separately, GSE208264 as provided so far is only the *sample metadata* (`family.soft`) - the actual miRNA-seq count matrix (the miRNA equivalent of `data/GSE208261_raw_counts.tsv`) has not been supplied yet, so there is nothing yet to differentially express or cross with mRNA even once a target database is available.
+
+**How to do these two on a computer with internet access** (they do not require re-deriving anything already done here):
+
+1. **PPI/hub genes**: go to [string-db.org](https://string-db.org) (multiple proteins search), paste the gene list in `results/25_concordant_genes_for_STRING.txt` (189 genes, direction-concordant between POP and SUI across shared pathways) or `results/26_top_DEG_genes_for_STRING.txt` (163 genes, the full 12x12 POP DEG list), organism *Homo sapiens*, confidence >=0.4 - export the network, then rank nodes by degree or betweenness (STRING's own site does this, or open the exported network in Cytoscape with the cytoHubba plugin for MCC/degree/betweenness hub scores).
+2. **miRNA-mRNA network**: first download the actual miRNA-seq count matrix for GSE208264 from its GEO page (Supplementary files, not just the `family.soft` metadata already provided) and send it over so the same DESeq2 pipeline used throughout this project can be applied to it. Separately/in parallel, install `multiMiR` (`BiocManager::install("multiMiR")`) or use [TargetScanHuman](https://www.targetscan.org/vert_80/) directly to predict targets of the differentially expressed miRNAs, then intersect predicted targets with the concordant gene list above to build the network (e.g., visualized in Cytoscape).
+
 ## Script 6: GSE208261, balanced 6-vs-6 vaginal wall (does it fix the confound?) - no, it reveals a worse problem
 
 **Run this:** `scripts/06_GSE208261_6v6_vaginalwall_vs_SUI.R`. Fully
