@@ -36,7 +36,7 @@
 # permutation) it is compared against below.
 #
 # METHOD - POP (GSE208261): reuses the DEG and classic-GSEA results ALREADY
-# COMPUTED by script 02 (`results/06_POP_GSE208261_voom_limma_full.csv`,
+# COMPUTED by script 02 (`results/06_POP_GSE208261_DESeq2_full.csv`,
 # `results/07_GSEA_classic_POP_GSE208261_KEGG.csv`) rather than recomputing
 # the ~500-permutation voom+limma loop again (identical computation,
 # ~18 minutes) - if you have not run script 02 yet, run it first. Only the
@@ -203,7 +203,7 @@ cat("\n")
 ## =============================================================================
 cat("================ STEP 3: POP (GSE208261) - loaded from script 02 ================\n\n")
 
-pop2_file <- "results/06_POP_GSE208261_voom_limma_full.csv"
+pop2_file <- "results/06_POP_GSE208261_DESeq2_full.csv"
 gsea_pop2_file <- "results/07_GSEA_classic_POP_GSE208261_KEGG.csv"
 if (!file.exists(pop2_file) || !file.exists(gsea_pop2_file)) {
   stop("Run scripts/02_GSE208261_POP_RNAseq_vs_SUI.R first - this script reuses ",

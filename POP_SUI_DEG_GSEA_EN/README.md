@@ -238,19 +238,39 @@ shallower (6.4-24.3 million reads, several under 13M) than the rest
 (19-24M), a likely batch effect unrelated to disease status. TMM
 normalization (`edgeR::calcNormFactors`) corrects for this before testing.
 
-### 1) DEG - a genuine null result
+### 1) DEG - two methods, reported side by side
 
-**0 DEGs** (|log2FC|>1, FDR<0.05) of 24,053 genes tested after
-`filterByExpr` + TMM + voom. Minimum FDR reached: 0.97. Genes at raw
-p<0.05: 903/24,053 (3.8%) - **at or below the ~5% expected by chance
-alone**. This is a genuine result, not a bug: properly normalized, this
-specific 6-vs-12 comparison shows no detectable single-gene signal, likely
-reflecting some combination of real biological absence of a strong
-effect and the uneven sequencing depth noted above adding noise.
-**Do not read this as "GSE208261 shows nothing"** - see the GSEA result
-next, which tells a very different story.
-`results/06_POP_GSE208261_DEG_logFC1_FDR05.csv` (empty),
-full ranked table in `results/06_POP_GSE208261_voom_limma_full.csv`.
+Two standard RNA-seq DEG tools are run on the exact same 6-vs-12
+tissue-matched samples and reported together, rather than picking one:
+
+| Method | Genes tested | DEG (\|log2FC\|>1, FDR<0.05) | Min. FDR |
+|---|---|---|---|
+| **DESeq2** (primary) | 24,763 | **2** (LOC105375520, **COMP**) | 0.035 |
+| edgeR + TMM + voom + limma (secondary) | 24,053 | 0 | 0.97 |
+
+**They genuinely disagree, and that's expected, not a bug in either.**
+DESeq2's independent filtering removes genes with no realistic chance of
+significance *before* multiple-testing correction, shrinking the
+correction's denominator - exactly the kind of borderline case (weak
+overall signal, unbalanced 6-vs-12 design) where that gives it more power
+than voom+limma. Neither tool is wrong; this is a known, documented point
+of disagreement between two widely used, standard methods, and reporting
+both transparently is more defensible than reporting only the one that
+finds something.
+
+**The one gene that matters**: **COMP (cartilage oligomeric matrix
+protein)** - an extracellular-matrix structural gene - is individually
+significant by DESeq2 (log2FC=+2.45, FDR=0.035), fitting the same
+ECM/connective-tissue theme found throughout this dataset's GSEA results
+(Focal adhesion, ECM-receptor interaction, actin cytoskeleton - see
+below). The other hit, LOC105375520, is an uncharacterized locus with no
+informative gene name.
+
+`results/06_POP_GSE208261_DEG_logFC1_FDR05.csv` (DESeq2 DEG list),
+`results/06_POP_GSE208261_DESeq2_full.csv` (full DESeq2 table, used as
+the primary result throughout this script and script 03),
+`results/06_POP_GSE208261_voom_limma_full.csv` (full voom+limma table,
+kept for comparison and reused only to rank genes for GSEA below).
 
 ### 2) GSEA - strong coordinated signal despite zero individual DEGs
 
@@ -258,10 +278,11 @@ full ranked table in `results/06_POP_GSE208261_voom_limma_full.csv`.
 feasible here because 6-vs-12 unpaired gives `choose(18,6) = 18,564`
 possible relabelings, no resolution ceiling like SUI's 3-vs-3 design).
 216 KEGG pathways tested: **122 significant at FDR<0.25; 115 at FDR<0.05**
-- far more than the microarray POP dataset (75) despite the complete
-absence of individual DEGs. This is precisely the scenario GSEA exists
-for (Subramanian et al. 2005): many genes shifting together by a small
-amount, invisible to a single-gene test, detectable in aggregate.
+- far more than the microarray POP dataset (75) despite only 1-2
+individually significant genes above. This is precisely the scenario
+GSEA exists for (Subramanian et al. 2005): many genes shifting together
+by a small amount, invisible to a single-gene test, detectable in
+aggregate.
 `results/07_GSEA_classic_POP_GSE208261_KEGG.csv`.
 
 ### 3) Shared pathways with SUI - the strongest cross-disease result in this project
@@ -307,7 +328,7 @@ than picking the more favorable one.
 
 | File | Shows |
 |---|---|
-| `10_volcano_POP_GSE208261.png` | Volcano plot, POP RNA-seq (no FDR<0.05 hits; points at raw p<0.05 for context) |
+| `10_volcano_POP_GSE208261.png` | Volcano plot, POP RNA-seq, DESeq2 (2 FDR<0.05 hits labeled; points at raw p<0.05 for context) |
 | `11_heatmap_top_POP_GSE208261.png` | Heatmap of the top 40 genes by p-value (log-CPM z-score) |
 | `12_GSEA_barplot_POP_GSE208261.png` | Top 15 POP KEGG pathways by NES (classic GSEA) |
 | `13_shared_pathways_NES_comparison_GSE208261.png` | NES in POP (GSE208261) vs NES in SUI for the 18 comparable shared pathways |
@@ -359,8 +380,10 @@ informative for a panel this short.
 
 **Direct gene-level concordance (STEP 4b) - the strongest result in this
 entire project**: of the 59 Chen2006 genes, **57 were also tested in
-GSE208261**, and **48 of 57 (84.2%) are direction-concordant** - binomial
-sign test **p = 1.52×10⁻⁷**. This is a much stronger signal than the
+GSE208261**, and **47 of 57 (82.5%) are direction-concordant** - binomial
+sign test **p = 7.51×10⁻⁷** (using GSE208261's primary DESeq2 logFC; both
+RNA-seq DEG methods agree closely here, voom+limma gives 48/57, 84.2%).
+This is a much stronger signal than the
 original Chen2006 x GSE53868 comparison documented elsewhere in this
 project's history (68%, p=0.013), and by a wide margin the strongest
 gene-level concordance found anywhere across every dataset pairing tried.
