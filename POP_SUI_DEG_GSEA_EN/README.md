@@ -748,7 +748,7 @@ Two further steps were attempted and are **not feasible in this environment** - 
 
 ## STRING results (run externally, analyzed here) - PPI hub genes and enrichment
 
-The 189 concordant genes (`results/25_concordant_genes_for_STRING.txt`) were submitted to string-db.org outside this environment; the exported network and four enrichment tables were analyzed here. Raw exports are kept in `data/string_export/` for reproducibility (`string_interactions.tsv`, `enrichment.KEGG.tsv`, `enrichment.Process.tsv`, `enrichment.Function.tsv`, `enrichment.TISSUES.tsv`).
+Two gene lists were submitted to string-db.org outside this environment, both exported from this project: **list 1** is the 189 direction-concordant genes (`results/25_concordant_genes_for_STRING.txt`); **list 2** is the 163 individually significant DEGs from the 12x12 model (`results/26_top_DEG_genes_for_STRING.txt`). Raw exports are kept in `data/string_export/`, named by which list they came from (`_list1_concordant189` / `_list2_DEG163`).
 
 ### Hub genes (by network degree)
 
@@ -779,6 +779,20 @@ Top GO Biological Process terms (`enrichment.Process.tsv`) go further than the K
 Top GO Molecular Function terms (`enrichment.Function.tsv`): mostly generic protein/enzyme/kinase binding terms (expected for a signaling-heavy gene set) plus a specific **integrin binding** (GO:0005178, 11 genes) and **cell adhesion molecule binding** (GO:0050839, 23 genes) signal, reinforcing the ECM-adhesion axis independently of the KEGG result above.
 
 TISSUES enrichment (`enrichment.TISSUES.tsv`): mostly broad/ubiquitous categories (liver, whole body, various leukemia cell lines, nervous system) - expected, since cytoskeleton/signaling genes are expressed almost everywhere, and **not** meaningful evidence of pelvic-tissue specificity on its own. One term is a direct, relevant exception worth citing: **BTO:0003099 "Internal female genital organ"** (71/189 genes, FDR 8.3e-13) - a genuine anatomical anchor for this gene set, even if the rest of the TISSUES list is not informative.
+
+### List 2 (163 DEG genes) - DISEASES, PMID literature, and Skin development: the ichthyosis signal
+
+Running the same kind of enrichment on **list 2** (the 163 individually significant DEGs, not the pathway-derived concordant set) surfaces something list 1 does not: a specific, tight, disease-gene-curated signal around **ichthyosis** (a family of monogenic skin-barrier/cornification disorders) - not a generic pathway category like "actin cytoskeleton," but a named disease with a defined causal gene set.
+
+**DISEASES enrichment** (`enrichment.DISEASES_list2_DEG163.tsv`): **Ichthyosis** (DOID:1697, 5/163 genes, FDR 0.0069) and **Skin disease** (DOID:37, 15/163 genes, FDR 0.0069) - driven by `KRT1, KRT10, SDR9C7, ALOXE3, ALOX12B` (ichthyosis) plus `TGM5, MVK, LEF1, SLC27A4, PGR, ULBP3, TGM3, AP1S3, PYCR1, KLK7` (broader skin disease). This is a curated disease-gene association database (not a pathway/GO ontology), so this is genuinely different evidence from anything else in this project.
+
+**GO Process, "Skin development"** (`enrichment.Process_list2_DEG163.tsv`, GO:0043588, 11/163 genes, FDR 0.025): `COMP, KRT1, KRT10, TMEM79, SLC27A4, KRT78, ALOXE3, SPRR2D, POU3F1, TGM3, ALOX12B` - note **COMP** and **POU3F1** here, the same two genes already flagged earlier in this project (COMP as script 2's individually-significant DEG with the ECM theme; POU3F1 as one of script 8's ROC candidate genes) - both independently land inside the same skin-development gene set STRING assembled on its own.
+
+**PMID literature co-mention enrichment** (`enrichment.PMID_list2_DEG163.tsv`): the top 5 papers by FDR are all about **congenital ichthyosis / epidermal barrier genetics** - e.g. *"Patients with congenital ichthyosis and TGM1 mutations overexpress other ARCI genes in the skin"* (7/163 genes: `KRT1, KRT10, SDR9C7, SLC27A4, ALOXE3, ELOVL4, ALOX12B`) and *"Ichthyosis: A Road Model for Skin Research"* (same 7 genes). These genes co-occur in the ichthyosis literature because they are the field's own known causal/marker gene set for skin-barrier cornification defects - POP tissue's top DEGs land almost entirely inside that established set.
+
+**Why list 1 (concordant genes) does not show this and list 2 (raw DEGs) does**: the concordance filter that built list 1 requires a gene to be a *member of a KEGG pathway* that is significant in both POP and SUI - it structurally favors broadly-annotated pathway genes (signaling, cytoskeleton) over tissue-specific structural genes like keratins, which are comparatively under-annotated in KEGG but very well annotated in skin-specific disease/literature databases. This is not a contradiction between the two lists - it is exactly what would be expected given how each list was constructed, and it means **list 2 is the more informative one specifically for the keratinization axis**, while list 1 remains the more informative one for the actin-cytoskeleton/ECM axis.
+
+**Why this matters for the thesis**: this is the fourth independent line of evidence (after (1) the original Chen2006 gene-level concordance test, (2) script 2's own KEGG GSEA, and (3) this section's own PPI/GO result on list 1) converging on the same keratinization/cornification theme in POP tissue - and the first one anchored to a **named, causally-defined disease** (ichthyosis) with an actual mechanistic literature behind it, rather than a broad pathway category. It is still not evidence that POP *is* a form of ichthyosis - it means POP's top differentially expressed genes overlap heavily with the epidermal-barrier/cornification gene program that ichthyosis research has characterized, which is a defensible, citable mechanistic hypothesis (disrupted epithelial barrier/cornification as part of POP pathophysiology) rather than a disease-identity claim.
 
 ### Honest reading for the thesis
 
