@@ -23,12 +23,19 @@ technologies** (microarray and RNA-seq).
 4. `scripts/04_GSE267852_VFB_vs_SUI.R` - a **third, independent POP
    dataset** (GSE267852, RNA-seq of primary cultured vaginal fibroblasts,
    not tissue biopsy) vs SUI (Wei 2020). Fully standalone. ~10 minutes.
+5. `scripts/05_GSE208261_FULL24_vs_SUI_FROM_SCRATCH.R` - a sensitivity
+   check on script 2: same GSE208261 dataset, but keeping the 6
+   uterosacral-ligament Control samples script 2 excluded (all 24 samples,
+   12 vs 12). Written fully independently (does not reuse script 2's or
+   any other script's code or saved results) and includes a direct,
+   quantitative test of whether including them is confounded by tissue
+   type. Fully standalone. ~13 minutes.
 
-All four scripts need no internet access at run time. Scripts 1, 2 and 4
-are fully standalone; script 3 depends only on script 2's saved results,
-not on script 1. Everything lands in `results/` and `figures/` (figures
-are numbered 01-09/script 1, 10-14/script 2, 15-18/script 3, 19-23/script
-4, so nothing gets
+All five scripts need no internet access at run time. Scripts 1, 2, 4 and
+5 are fully standalone; script 3 depends only on script 2's saved
+results, not on script 1. Everything lands in `results/` and `figures/`
+(figures are numbered 01-09/script 1, 10-14/script 2, 15-18/script 3,
+19-23/script 4, 24-27/script 5, so nothing gets
 overwritten).
 
 ## Mixing microarray and RNA-seq - is that valid?
@@ -537,3 +544,145 @@ alone, or is lost/altered by culture).
 | `21_GSEA_barplot_POP_GSE267852VFB.png` | Top 15 POP KEGG pathways by NES - dominated by metabolism/oxidative phosphorylation |
 | `22_shared_pathways_NES_comparison_GSE267852VFB.png` | NES in POP (GSE267852 VFB) vs NES in SUI for the 16 comparable shared pathways - mostly discordant |
 | `23_gene_direction_heatmap_GSE267852VFBxSUI.png` | Direction (fill) and log2FC (text) per gene, shared-pathway genes tested in both diseases |
+
+## Script 5: GSE208261, ALL 24 samples (ligament controls included) vs SUI
+
+**Run this:** `scripts/05_GSE208261_FULL24_vs_SUI_FROM_SCRATCH.R`. Fully
+standalone, written independently of scripts 1-4 (re-derives everything,
+including the SUI side, from the raw files rather than reusing any saved
+result) - per explicit request, so that redoing the work independently
+could catch errors the earlier scripts might share. ~13 minutes.
+
+### The question this script answers
+
+Script 2 excluded the 6 "Control_D" (uterosacral ligament) samples from
+GSE208261 because there is no POP-side ligament arm to pair them with.
+This script instead uses **all 24 samples**: 12 Control (6 ligament + 6
+vaginal wall, combined into one group) vs 12 POP (all vaginal wall) -
+testing directly whether that exclusion was too conservative, and giving
+the ligament samples a role rather than discarding them.
+
+### Is this academically valid? A direct, evidence-based answer
+
+**Partially, and with a real, quantifiable caveat - not a simple yes or
+no.** Two pieces of evidence from this exact dataset, not just
+theoretical argument:
+
+1. **Tissue-alone effect (STEP 1c diagnostic)**: comparing ligament vs
+   vaginal wall *within controls only* (disease status held constant)
+   found **0 genes** differing at |log2FC|>1, FDR<0.05 (n=6 vs 6, limited
+   power) - a smaller individual-gene signal than initially expected for
+   two different anatomical structures.
+2. **Model comparison (the more informative diagnostic)**: the naive
+   `~group` model (12 mixed-tissue Control vs 12 vaginal-wall POP) finds
+   **163 DEG** (123 up / 40 down, min FDR 0.00014) - dramatically more
+   than script 2's tissue-matched 6-vs-12 comparison (2 DEG). Adding
+   tissue as a covariate (`~tissue + group`) **collapses this back to 0
+   DEG** (min FDR 0.078, similar to script 2's null). **This is direct,
+   quantitative evidence that most of the 163 "DEG" in the naive model
+   are driven by tissue composition, not POP status** - exactly the
+   confound the design predicts, empirically confirmed here.
+3. **But** the PCA (`figures/25_PCA_tissue_vs_disease_GSE208261.png`)
+   shows ligament and vaginal-wall Control samples do NOT separate
+   cleanly by tissue on PC1/PC2 - POP vs Control is closer to the
+   dominant axis of separation than tissue is. This is more reassuring
+   than (2) alone suggests: the confound is real and demonstrated, but it
+   is not so severe that tissue completely swamps all structure in the
+   data.
+
+**Verdict**: the naive 12-vs-12 single-gene DEG list (163 genes) should
+**not** be reported as a clean POP signature - the model-adjustment test
+above shows it is substantially confounded. The tissue-adjusted model (0
+DEG) is the more defensible individual-gene answer, though it rests on
+the assumption (untestable without POP-side ligament data) that the
+tissue shift is the same in POP as in controls. The **GSEA result below
+is more robust to this problem than the single-gene DEG list**, because
+it summarizes coordinated shifts across a whole pathway's genes rather
+than individual gene calls, and its cross-check against SUI (an entirely
+different disease and dataset with no possible ligament-vs-vaginal-wall
+confound of its own) provides an external consistency check the DEG list
+does not have.
+
+### Why might the authors have included the ligament samples anyway?
+
+A plausible, evidence-consistent (not certain) explanation: POP surgical
+repair is performed on, and biopsies are naturally taken from, the
+**vaginal wall** - the site of the visible prolapse and the tissue
+actually operated on. Uterosacral ligament tissue is more readily
+available from **control** patients undergoing hysterectomy for
+unrelated benign indications (where ligament access/excision is more
+routine) than from POP patients, whose surgery targets the prolapsed
+vaginal segment specifically and may not always include ligament
+excision (it is procedure-dependent). Under this explanation, the
+ligament controls were not "wasted" - they most likely served a
+**different comparison** in the original study (e.g. characterizing
+baseline differences between pelvic support tissues in unaffected women),
+not a POP-vs-Control test. This reading is consistent with the metadata
+itself: `tissue: uterosacral ligaments` only ever appears in the Control
+arm, never POP (`data/GSE208261_sample_metadata.csv`). This is this
+project's best inference from the public metadata, not a claim about the
+authors' actual stated intent (their full methods/discussion is not
+available here).
+
+### Results
+
+**DEG** (three models, DESeq2 primary throughout):
+
+| Model | Design | DEG (FDR<0.05, \|log2FC\|>1) | Min. FDR |
+|---|---|---|---|
+| Naive (this script, as requested) | ~group, 12 mixed-tissue Control vs 12 POP | **163** | 0.00014 |
+| Tissue-adjusted (this script) | ~tissue+group, same 24 samples | **0** | 0.078 |
+| Tissue-matched only (script 2) | ~group, 6 vaginal-wall Control vs 12 POP | 2 | 0.035 |
+
+`results/16_POP_GSE208261_FULL24_naive_DESeq2_full.csv`,
+`results/16_POP_GSE208261_FULL24_tissueAdj_DESeq2_full.csv`.
+
+**GSEA** (classic, phenotype permutation, 500 permutations, balanced 12
+vs 12, `choose(24,12)≈2.7M` relabelings - excellent resolution): 218 KEGG
+pathways tested, **117 significant at FDR<0.25; 97 at FDR<0.05**.
+`results/17_GSEA_classic_POP_GSE208261_FULL24_KEGG.csv`.
+
+**Shared pathways with SUI (Wei 2020)** - re-derived fresh in this
+script, including an independent re-verification of the Fold Change
+sign-convention bug found earlier (confirmed again here, same fix
+applied):
+
+| Threshold | POP (FULL24) significant | SUI significant | **Shared** |
+|---|---|---|---|
+| FDR<0.25 | 117 | 50 | **22** |
+| FDR<0.05 | 97 | 0 | **0** |
+
+Of 22 shared pathways at FDR<0.25, direction was comparable for 12 (10
+excluded, NES undefined on one side - the same normalization edge case
+documented in earlier scripts). **10 of 12 (83.3%) are
+direction-concordant** - closely matching script 2's tissue-matched
+result (83%), despite the confound concern above. Gene level: of 713
+genes in shared pathways tested in both diseases, **364 (51.1%)
+concordant** - just above 50%.
+`results/19_shared_pathways_GSE208261FULL24xSUI_FDR025.csv`,
+`figures/27_shared_pathways_NES_comparison_GSE208261_FULL24.png`.
+
+**Honest reading**: the GSEA-level agreement with SUI (83% pathway
+concordance) closely reproduces script 2's tissue-matched result even
+though the DEG-level analysis shows real tissue confounding - consistent
+with the read above that GSEA is more robust to this specific problem
+than the single-gene DEG list. This does not fully resolve the
+academic-validity question (a genuine POP effect and a partially-shared
+tissue effect could both be contributing to the same GSEA result), but it
+is reassuring that the *conclusion* (POP and SUI share a majority-
+concordant set of pathways) is stable whether or not the ligament
+samples are included. **Recommendation for the thesis**: report script
+2's tissue-matched comparison as the primary, cleaner result, and this
+script as a robustness/sensitivity check - explicitly describing the
+confound, the diagnostic evidence for and against it, and the fact that
+the conclusion did not change. That is a stronger, more defensible
+methods section than silently using either result alone.
+
+### Figures (script 5)
+
+| File | Shows |
+|---|---|
+| `24_volcano_POP_GSE208261_FULL24.png` | Volcano plot, naive 12v12 DESeq2 (163 DEG - see confound caveat above before citing this number) |
+| `25_PCA_tissue_vs_disease_GSE208261.png` | **The key diagnostic**: all 24 samples, colored by tissue, shaped by disease status - shows POP/Control separates more than tissue does |
+| `26_GSEA_barplot_POP_GSE208261_FULL24.png` | Top 15 POP KEGG pathways by NES (classic GSEA, naive 12v12 ranking) |
+| `27_shared_pathways_NES_comparison_GSE208261_FULL24.png` | NES in POP (FULL24) vs NES in SUI for the 12 comparable shared pathways |
