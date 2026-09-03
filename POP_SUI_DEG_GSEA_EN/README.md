@@ -2,7 +2,7 @@
 
 Self-contained, English-language deliverable comparing gene expression in
 Pelvic Organ Prolapse (POP) and Stress Urinary Incontinence (SUI), across
-**two independent POP datasets, two SUI sources, and two measurement
+**three independent POP datasets, two SUI sources, and two measurement
 technologies** (microarray and RNA-seq).
 
 **Run these, in order:**
@@ -20,11 +20,15 @@ technologies** (microarray and RNA-seq).
    against a **third, literature-panel SUI source** (Chen 2006). Requires
    script 2 to have run first (reuses its saved POP results instead of
    recomputing them). Under a minute to run.
+4. `scripts/04_GSE267852_VFB_vs_SUI.R` - a **third, independent POP
+   dataset** (GSE267852, RNA-seq of primary cultured vaginal fibroblasts,
+   not tissue biopsy) vs SUI (Wei 2020). Fully standalone. ~10 minutes.
 
-All three scripts need no internet access at run time. Scripts 1 and 2 are
-fully standalone; script 3 depends only on script 2's saved results, not
-on script 1. Everything lands in `results/` and `figures/` (figures are
-numbered 01-09/script 1, 10-14/script 2, 15-18/script 3, so nothing gets
+All four scripts need no internet access at run time. Scripts 1, 2 and 4
+are fully standalone; script 3 depends only on script 2's saved results,
+not on script 1. Everything lands in `results/` and `figures/` (figures
+are numbered 01-09/script 1, 10-14/script 2, 15-18/script 3, 19-23/script
+4, so nothing gets
 overwritten).
 
 ## Mixing microarray and RNA-seq - is that valid?
@@ -423,3 +427,113 @@ is the one place this script looks negative, but that reflects the
 Chen2006 panel's small size limiting pathway-level power, not a
 contradiction - the direct gene-level test bypasses that limitation and
 is the more appropriate comparison for a panel this size.
+
+## Script 4: GSE267852 (POP, vaginal fibroblasts) vs SUI (Wei 2020)
+
+**Run this:** `scripts/04_GSE267852_VFB_vs_SUI.R`. Fully standalone
+(re-derives the SUI side itself, like script 2). ~10 minutes (500
+permutations, but a smaller 6-vs-6 design than script 2's 6-vs-12).
+
+Tchoukalova/Chen (Mayo Clinic), GSE267852, *"Cell type specific
+differences in the transcriptomes of adipose derived stem cells and
+vaginal fibroblasts in patients with pelvic organ prolapse."* RNA-seq of
+**primary cultured cells**, not tissue biopsy like the other two POP
+sources in this project: 6 POP vs 6 continent controls, vaginal
+fibroblasts (VFB) isolated and expanded in culture. The series also
+includes 12 adipose-derived stem cell (ASC) samples from the same
+subjects, a different tissue origin entirely - not used here.
+
+**Set expectations before reading the numbers**: the original authors'
+own abstract states they found *"no differentially expressed genes (DEG)
+between POP and CTRL in ASCs and VFBs"* using DESeq2 at FDR<0.05 - the
+same primary method and threshold used below. They only detected a
+signal (23 up / 29 down genes) with a much more lenient, **uncorrected**
+criterion (raw p<0.01). A null DEG result here is not a pipeline problem
+- it is what the source study itself reports.
+
+### 1) DEG - confirms the original study's own null result
+
+| Method | Genes tested | DEG (FDR<0.05, \|log2FC\|>1) | Min. FDR |
+|---|---|---|---|
+| DESeq2 (primary) | 16,417 | **0** | 0.095 |
+| edgeR+voom+limma (secondary) | 16,367 | 0 | 1.00 |
+
+DESeq2's minimum FDR (0.095) lands close to but does not cross 0.05 -
+this closely reproduces the original paper's own reported null result at
+this threshold, a good sign the pipeline here is behaving correctly, not
+a discrepancy to explain away. At the paper's own less-stringent
+criterion (raw p<0.01, no correction), 138 of 16,417 genes qualify here.
+`results/13_POP_GSE267852_VFB_DEG_logFC1_FDR05.csv` (empty),
+`results/13_POP_GSE267852_VFB_DESeq2_full.csv` (full table).
+
+### 2) GSEA - strong signal again, but a different theme this time
+
+**Classic GSEA** (phenotype/group permutation, 500 permutations, balanced
+6-vs-6, `choose(12,6)=924` possible relabelings). 216 KEGG pathways
+tested: **121 significant at FDR<0.25; 106 at FDR<0.05**.
+`results/14_GSEA_classic_POP_GSE267852VFB_KEGG.csv`.
+
+Unlike the two tissue-biopsy POP datasets (GSE53868, GSE208261), whose
+top pathways centered on keratinization and ECM/adhesion, **VFB's top
+pathways are almost all core metabolism, led by Oxidative phosphorylation
+(KEGG 00190)**, all strongly *down* in POP - see
+`figures/21_GSEA_barplot_POP_GSE267852VFB.png`. A plausible reason:
+these are cultured, passaged cells, not intact tissue - culture
+conditions and passage number are well known to shift fibroblast
+metabolic state, and that effect can dominate a comparison this way even
+when a real disease signal is also present.
+
+### 3) Shared pathways with SUI - a different, weaker result than script 2
+
+| Threshold | POP (GSE267852 VFB) significant | SUI significant | **Shared** |
+|---|---|---|---|
+| FDR<0.25 | 121 | 50 | **27** |
+| FDR<0.05 | 106 | 0 | **0** (SUI has none at this threshold) |
+
+Of the 27 shared pathways at FDR<0.25, direction was comparable for 16
+(11 excluded - NES undefined on one side, the same normalization edge
+case documented in script 1). **Only 2 of 16 (12.5%) are
+direction-concordant** - the opposite pattern from script 2's 83%.
+Gene-level: of 673 genes in these shared pathways tested in both
+diseases, **254 (37.7%) are concordant** - below 50%, and below even the
+original microarray comparison's 40.9%.
+`results/15_shared_pathways_GSE267852VFBxSUI_FDR025.csv`,
+`figures/22_shared_pathways_NES_comparison_GSE267852VFB.png`.
+
+**One pathway is worth flagging despite the overall discordance**: KEGG
+04512 (ECM-receptor interaction) is one of the 2 concordant pathways
+here (both down) - the same pathway that came up concordant in script 2
+against the tissue-biopsy POP dataset. It is a thin thread, not strong
+evidence on its own, but it is consistent with the rest of this
+project's ECM/connective-tissue theme even in a dataset that otherwise
+points a different direction.
+
+### Honest reading for the thesis
+
+**This is the weakest of the three POP-vs-SUI comparisons in this
+project**, and that is worth reporting as-is rather than downplaying.
+The most likely explanation is not a flaw in SUI or in the method, but
+that **vaginal fibroblasts in culture are a biologically different
+system from intact vaginal tissue** (loses epithelium, immune cells,
+vasculature, and the ECM microenvironment; gains culture/passage
+effects) - which would explain both why its top GSEA theme (metabolism)
+differs so much from the two tissue-biopsy POP datasets, and why its
+agreement with SUI (whole-tissue biopsy) is weaker. Reporting all three
+POP comparisons side by side - strong/concordant tissue biopsy (script
+2), strong direct gene-level concordance against a second SUI source
+(script 3), and this weaker cultured-cell comparison - gives a fuller
+and more defensible picture than reporting only the strongest one:
+the disease signal that replicates across *tissue* is more likely to be
+real POP biology, while its absence in cultured VFB narrows down what
+kind of a signal it is (probably not cell-autonomous within fibroblasts
+alone, or is lost/altered by culture).
+
+### Figures (script 4)
+
+| File | Shows |
+|---|---|
+| `19_volcano_POP_GSE267852VFB.png` | Volcano plot, POP VFB, DESeq2 (no FDR<0.05 hits; points at raw p<0.05 for context) |
+| `20_heatmap_top_POP_GSE267852VFB.png` | Heatmap of the top 40 genes by p-value (log-CPM z-score) |
+| `21_GSEA_barplot_POP_GSE267852VFB.png` | Top 15 POP KEGG pathways by NES - dominated by metabolism/oxidative phosphorylation |
+| `22_shared_pathways_NES_comparison_GSE267852VFB.png` | NES in POP (GSE267852 VFB) vs NES in SUI for the 16 comparable shared pathways - mostly discordant |
+| `23_gene_direction_heatmap_GSE267852VFBxSUI.png` | Direction (fill) and log2FC (text) per gene, shared-pathway genes tested in both diseases |
