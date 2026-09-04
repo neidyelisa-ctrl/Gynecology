@@ -557,10 +557,13 @@ cat("of which 10 of 12 comparable (83.3%) are direction-concordant.\n\n")
 
 
 ## =============================================================================
-## PART 6: quick check plot (POP volcano plot)
+## PART 6: figures - volcano, GSEA barplots (POP + SUI), shared-pathway plot
 ## =============================================================================
-cat("================ PART 6: check plot ================\n\n")
+cat("================ PART 6: figures ================\n\n")
+cat("All figures are saved into the 'figures' subfolder of your working\n")
+cat("directory (", getwd(), "\\figures) - same folder as the results CSVs.\n\n", sep = "")
 
+## --- 6a: volcano plot (POP DEG) --------------------------------------------
 pop_full$sig <- "NS"
 pop_full$sig[pop_full$logFC > 1 & pop_full$adj.P.Val < 0.05] <- "Up"
 pop_full$sig[pop_full$logFC < -1 & pop_full$adj.P.Val < 0.05] <- "Down"
@@ -574,6 +577,54 @@ p_volcano <- ggplot(pop_full, aes(x = logFC, y = -log10(P.Value), color = sig)) 
   theme_bw() + theme(legend.position = "top")
 ggsave("figures/volcano_POP.png", p_volcano, width = 8, height = 6, dpi = 300)
 cat("Saved: figures/volcano_POP.png\n\n")
+
+## --- 6b: GSEA barplots (top 15 pathways by p-value, POP and SUI) -----------
+make_gsea_barplot <- function(gsea_res, title, n_top = 15) {
+  gsea_res <- gsea_res[!is.na(gsea_res$NES), ]
+  d <- head(gsea_res[order(gsea_res$pvalue), ], n_top)
+  d$Sig <- ifelse(d$p.adjust < 0.05, "FDR<0.05", ifelse(d$p.adjust < 0.25, "FDR<0.25", "NS"))
+  d$Label <- factor(d$PathwayName, levels = rev(d$PathwayName))
+  ggplot(d, aes(x = NES, y = Label, fill = Sig)) +
+    geom_col() +
+    scale_fill_manual(values = c("FDR<0.05" = "#B2182B", "FDR<0.25" = "#F4A582", "NS" = "grey70")) +
+    geom_vline(xintercept = 0, color = "grey30") +
+    labs(title = title, x = "Normalized Enrichment Score (NES)", y = NULL, fill = "Significance") +
+    theme_bw() + theme(axis.text.y = element_text(size = 8), plot.title = element_text(size = 12))
+}
+
+p_bar_pop <- make_gsea_barplot(gsea_pop, "GSEA (classic) - top KEGG pathways in POP (GSE208261, 12x12)")
+ggsave("figures/GSEA_barplot_POP.png", p_bar_pop, width = 12, height = 6.5, dpi = 300)
+cat("Saved: figures/GSEA_barplot_POP.png\n\n")
+
+p_bar_sui <- make_gsea_barplot(gsea_sui, "GSEA (preranked) - top KEGG pathways in SUI (Wei 2020)")
+ggsave("figures/GSEA_barplot_SUI.png", p_bar_sui, width = 12, height = 6.5, dpi = 300)
+cat("Saved: figures/GSEA_barplot_SUI.png\n\n")
+
+## --- 6c: shared-pathway NES comparison scatter plot ------------------------
+if (nrow(shared_025) > 0) {
+  shared_plot_data <- shared_025[!is.na(shared_025$NES_POP) & !is.na(shared_025$NES_SUI), ]
+  if (nrow(shared_plot_data) > 0) {
+    p_shared <- ggplot(shared_plot_data, aes(x = NES_POP, y = NES_SUI, label = PathwayName)) +
+      geom_hline(yintercept = 0, color = "grey70") + geom_vline(xintercept = 0, color = "grey70") +
+      geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "grey50") +
+      geom_point(aes(color = Same_direction), size = 3) +
+      scale_color_manual(values = c("TRUE" = "#2166AC", "FALSE" = "#B2182B"),
+                          labels = c("TRUE" = "Same direction", "FALSE" = "Opposite direction")) +
+      geom_text_repel(size = 3, max.overlaps = 30) +
+      labs(title = "Shared pathways (FDR<0.25): NES in POP vs NES in SUI",
+           x = "NES - POP (classic GSEA)", y = "NES - SUI (preranked GSEA)", color = NULL) +
+      theme_bw() + theme(legend.position = "top")
+    ggsave("figures/shared_pathways_NES_comparison.png", p_shared, width = 9, height = 7, dpi = 300)
+    cat("Saved: figures/shared_pathways_NES_comparison.png\n\n")
+  } else {
+    cat("SKIPPED figures/shared_pathways_NES_comparison.png (no pathway with NES defined on both sides)\n\n")
+  }
+} else {
+  cat("SKIPPED figures/shared_pathways_NES_comparison.png (no shared pathway at FDR<0.25)\n\n")
+}
+
+cat("=== All Part 1-6 figures saved: volcano_POP.png, GSEA_barplot_POP.png,\n")
+cat("GSEA_barplot_SUI.png, shared_pathways_NES_comparison.png ===\n\n")
 
 
 ## =============================================================================
@@ -592,30 +643,83 @@ cat("internet there either) to check the exact data structure beforehand;\n")
 cat("if you get an error here, send me the full message.\n\n")
 
 ## --- 7a: download KEGG gene sets via msigdbr -------------------------------
-cat("Downloading KEGG gene sets via msigdbr...\n")
-kegg_sets_raw <- tryCatch(
-  msigdbr(species = "Homo sapiens", category = "C2", subcategory = "CP:KEGG_LEGACY"),
-  error = function(e) NULL
-)
-if (is.null(kegg_sets_raw) || nrow(kegg_sets_raw) == 0) {
-  cat("Subcategory 'CP:KEGG_LEGACY' empty or not found - trying 'CP:KEGG'\n")
-  cat("(the name used in older msigdbr versions)...\n")
-  kegg_sets_raw <- tryCatch(
-    msigdbr(species = "Homo sapiens", category = "C2", subcategory = "CP:KEGG"),
-    error = function(e) NULL
+## msigdbr changed its own function arguments in version 10.0.0 (category/
+## subcategory -> collection/subcollection) - hard-coding either name risks
+## breaking depending on which version is installed. Instead, this asks
+## msigdbr ITSELF what its installed version supports and what collections
+## exist, and builds the call dynamically - this should keep working even
+## if msigdbr's naming changes again in the future.
+cat("Discovering what your installed msigdbr version supports...\n")
+msigdbr_arg_names <- names(formals(msigdbr))
+cat("msigdbr() arguments in your installed version:", paste(msigdbr_arg_names, collapse = ", "), "\n")
+
+collections_tab <- as.data.frame(msigdbr_collections())
+cat("Columns in msigdbr_collections():", paste(colnames(collections_tab), collapse = ", "), "\n")
+
+# Search every column of every row for the text "KEGG", regardless of which
+# column it lives in - this does not depend on knowing the exact column name.
+kegg_row_mask <- apply(collections_tab, 1, function(r) any(grepl("kegg", r, ignore.case = TRUE)))
+kegg_rows <- collections_tab[kegg_row_mask, ]
+cat("\nRows in msigdbr_collections() mentioning KEGG:\n")
+print(kegg_rows)
+if (nrow(kegg_rows) == 0) {
+  stop(
+    "\n\nNo KEGG-related entry was found in msigdbr_collections() at all -\n",
+    "this is unexpected. Please run this manually and send me the full\n",
+    "output so I can fix this part:\n\n",
+    "  library(msigdbr)\n",
+    "  print(msigdbr_collections(), n = 100)\n\n"
   )
 }
+# Prefer an entry that also mentions LEGACY - that's the freely
+# redistributable KEGG snapshot msigdbr can actually ship gene mappings
+# for (see README for why this caps pathway coverage around ~200).
+legacy_mask <- apply(kegg_rows, 1, function(r) any(grepl("legacy", r, ignore.case = TRUE)))
+chosen_row <- if (any(legacy_mask)) kegg_rows[legacy_mask, ][1, ] else kegg_rows[1, ]
+cat("\nSelected this collection/subcollection row:\n")
+print(chosen_row)
+
+# Figure out which columns hold the "big" grouping (e.g. "C2") and the
+# "small" grouping (e.g. "CP:KEGG_LEGACY"), whatever they happen to be
+# named in this version, then build the msigdbr() call using whichever
+# argument names this installed version actually accepts.
+col_names <- colnames(collections_tab)
+big_col   <- col_names[col_names %in% c("gs_collection", "collection", "gs_cat", "category")][1]
+small_col <- col_names[col_names %in% c("gs_subcollection", "subcollection", "gs_subcat", "subcategory")][1]
+if (is.na(big_col) || is.na(small_col)) {
+  stop(
+    "\n\nCould not identify which columns in msigdbr_collections() hold the\n",
+    "collection/subcollection grouping (checked common names, none matched\n",
+    "columns: ", paste(col_names, collapse = ", "), "). Please send me this\n",
+    "column list so I can fix this part.\n"
+  )
+}
+big_val <- chosen_row[[big_col]]
+small_val <- chosen_row[[small_col]]
+cat("Using ", big_col, " = '", big_val, "' and ", small_col, " = '", small_val, "'\n\n", sep = "")
+
+call_args <- list(species = "Homo sapiens")
+if ("collection" %in% msigdbr_arg_names) call_args$collection <- big_val
+if ("subcollection" %in% msigdbr_arg_names) call_args$subcollection <- small_val
+if ("category" %in% msigdbr_arg_names) call_args$category <- big_val
+if ("subcategory" %in% msigdbr_arg_names) call_args$subcategory <- small_val
+
+cat("Downloading KEGG gene sets via msigdbr...\n")
+kegg_sets_raw <- tryCatch(do.call(msigdbr, call_args), error = function(e) {
+  cat("msigdbr() raised an error:", conditionMessage(e), "\n")
+  NULL
+})
 if (is.null(kegg_sets_raw) || nrow(kegg_sets_raw) == 0) {
   stop(
-    "\n\nCould not obtain KEGG gene sets via msigdbr with either of the two\n",
-    "subcategory names tried ('CP:KEGG_LEGACY' and 'CP:KEGG'). Run this\n",
-    "manually to see the options available in your package version, and\n",
-    "send me the result:\n\n",
-    "  library(msigdbr)\n",
-    "  msigdbr_collections()\n\n"
+    "\n\nmsigdbr() returned no data even using the arguments discovered\n",
+    "above (", big_col, "='", big_val, "', ", small_col, "='", small_val, "').\n",
+    "Please send me this full console output (including the 'Rows in\n",
+    "msigdbr_collections() mentioning KEGG' table above) so I can fix this\n",
+    "part precisely for your package version.\n"
   )
 }
-cat("Columns available in msigdbr (diagnostic):\n")
+kegg_sets_raw <- as.data.frame(kegg_sets_raw)
+cat("Columns available in the returned gene sets (diagnostic):\n")
 print(colnames(kegg_sets_raw))
 cat("\nKEGG gene sets obtained:", length(unique(kegg_sets_raw$gs_name)),
     "pathways,", nrow(kegg_sets_raw), "pathway-gene pairs\n\n")
@@ -704,6 +808,31 @@ cmp_pop <- compare_methods(gsea_pop, fgsea_pop, "POP")
 write.csv(cmp_pop, "results/comparison_vs_official_fgsea_POP.csv", row.names = FALSE)
 cmp_sui <- compare_methods(gsea_sui, fgsea_sui, "SUI")
 write.csv(cmp_sui, "results/comparison_vs_official_fgsea_SUI.csv", row.names = FALSE)
+
+## --- 7g: comparison scatter plots (our NES vs official NES) ---------------
+make_comparison_plot <- function(cmp, label) {
+  ggplot(cmp, aes(x = NES_ours, y = NES_official, color = same_direction)) +
+    geom_hline(yintercept = 0, color = "grey70") + geom_vline(xintercept = 0, color = "grey70") +
+    geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "grey50") +
+    geom_point(size = 2.5, alpha = 0.8) +
+    scale_color_manual(values = c("TRUE" = "#2166AC", "FALSE" = "#B2182B"),
+                        labels = c("TRUE" = "Same direction", "FALSE" = "Opposite direction")) +
+    labs(title = paste0("Our hand-rolled GSEA vs official fgsea - ", label),
+         subtitle = paste0(nrow(cmp), " comparable pathways, ",
+                            round(100 * mean(cmp$same_direction), 1), "% same direction",
+                            if (nrow(cmp) >= 3) paste0(", r=", round(cor(cmp$NES_ours, cmp$NES_official), 3)) else ""),
+         x = "NES - our hand-rolled GSEA", y = "NES - official fgsea", color = NULL) +
+    theme_bw() + theme(legend.position = "top")
+}
+if (nrow(cmp_pop) >= 2) {
+  ggsave("figures/comparison_vs_official_fgsea_POP.png", make_comparison_plot(cmp_pop, "POP"), width = 8, height = 7, dpi = 300)
+  cat("Saved: figures/comparison_vs_official_fgsea_POP.png\n")
+}
+if (nrow(cmp_sui) >= 2) {
+  ggsave("figures/comparison_vs_official_fgsea_SUI.png", make_comparison_plot(cmp_sui, "SUI"), width = 8, height = 7, dpi = 300)
+  cat("Saved: figures/comparison_vs_official_fgsea_SUI.png\n")
+}
+cat("\n")
 
 cat("=================================================================\n")
 cat("=== END OF SCRIPT ===\n")
