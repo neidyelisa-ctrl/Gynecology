@@ -723,6 +723,14 @@ The rule in every case is "count >= 10 in at least as many samples as the smalle
 
 3 IDs used in this project's results (00072 "Synthesis and degradation of ketone bodies", 00460 "Cyanoamino acid metabolism", 04320 "Dorso-ventral axis formation") were **not found at all** in the current official list - most likely retired/merged pathway maps that still exist in the `org.Hs.eg.db` gene-to-pathway mapping this project uses (a frozen Bioconductor snapshot) but have since been removed from KEGG's live site; kept as-is with this caveat rather than guessed at, since no current official name exists to substitute. All figures/tables were regenerated after this correction via `scripts/relabel_KEGG_pathways.R` (same guarantee as above: no statistic changed, only names).
 
+## Script 11: validating the GSEA engine itself against the official `fgsea` package
+
+The pathway-name audit above raised a bigger question: what *else* in this project was built entirely offline, never checked against an official platform? The single biggest one - bigger than pathway names, since it affects every NES/p-value in the project - is the GSEA calculation itself. No environment used to build this project has internet access to install `fgsea` (Bioconductor's official GSEA implementation), so every script since script 1 uses a from-scratch reimplementation of the weighted running-sum Enrichment Score (Subramanian et al. 2005). That reimplementation has never been run side by side against the official package.
+
+**Run this:** `scripts/11_VALIDATE_vs_official_fgsea.R` - same validated 12x12 pipeline as script 10 (identical Parts 1-6, same setup/file-check/package-bootstrap pattern), plus a new **Part 7** that installs `fgsea` and `msigdbr` (needs internet, which this project's own environment doesn't have but the user's Windows machine does), pulls the KEGG gene sets fresh from `msigdbr` (not the frozen `org.Hs.eg.db` snapshot the rest of the project uses), runs official `fgsea()` on the exact same ranked gene lists this project's own code produces for POP and SUI, and reports the concordance (direction agreement, NES correlation) between the two methods per pathway.
+
+**Honesty about this script's own limitations**: Part 7 could not be tested end-to-end in this project's own environment (no internet to install `fgsea`/`msigdbr` here either), so it includes diagnostic printouts (`msigdbr` column names, how many pathways matched by ID vs. had to fall back to name-based matching) and defensive fallbacks rather than assuming a single fixed data structure. This is disclosed in the script's own header. Results from running it are not yet available in this repository - to be added once run.
+
 ## Script 8: candidate biomarker screen (ROC/AUC) - and what could not be done offline
 
 Following up on "can the genes help with an analytical next step?", two things were explored.
