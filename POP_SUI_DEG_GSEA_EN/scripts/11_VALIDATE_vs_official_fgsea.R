@@ -16,11 +16,14 @@
 # WHAT IT DOES: runs the already-validated 12x12 pipeline (DESeq2 + hand-
 # rolled GSEA, the same numbers as always: 163 DEG / 117 pathways / 22
 # shared) AND, in the new PART 7, runs the official `fgsea` package on the
-# EXACT SAME ranked gene list, using KEGG gene sets from `msigdbr` (the
-# official database, downloaded live, NOT the frozen `org.Hs.eg.db`
-# snapshot the rest of the script uses). At the end it compares the two
-# side by side: how many pathways agree in direction, and the correlation
-# between the NES values from each method.
+# EXACT SAME ranked gene list AND THE EXACT SAME KEGG gene sets (from
+# org.Hs.eg.db) our hand-rolled GSEA already used in Parts 3-4 above. Using
+# identical gene sets on both sides is deliberate: it isolates the
+# comparison to ONLY the enrichment-score/permutation algorithm itself,
+# with no other difference (a different gene-set source or version) able
+# to explain a disagreement. At the end it compares the two side by side:
+# how many pathways agree in direction, and the correlation between the
+# NES values from each method.
 #
 # HOW TO RUN THIS:
 #
@@ -42,17 +45,16 @@
 #      but a loop variable only exists while the loop that declares it is
 #      actually running.
 #   4. The FIRST time you run it, Part 0 installs whichever packages are
-#      missing, including `fgsea` and `msigdbr` (new in this version) -
-#      this needs internet and can take a while. From the second run on,
-#      it just runs directly.
-#   5. Part 7 (the comparison against official fgsea) is NEW and LESS
-#      TESTED than the rest of the script - there is no way to install or
-#      run `msigdbr` in the environment this project was built in (no
-#      internet there either) to check the exact structure of what it
-#      returns, so Part 7 includes diagnostic printouts and a few
-#      fallbacks in case something doesn't match exactly as expected. If
-#      you get an error specifically in Part 7, send me the full error
-#      message and I will fix it.
+#      missing, including `fgsea` (new in this version) - this needs
+#      internet and can take a while. From the second run on, it just runs
+#      directly. Note: this version does NOT use `msigdbr` any more (see
+#      below), so it does not need to reach zenodo.org or any other
+#      external gene-set database - only CRAN/Bioconductor, once, to
+#      install `fgsea` itself.
+#   5. Part 7 (the comparison against official fgsea) reuses the KEGG gene
+#      sets already built from org.Hs.eg.db in Parts 3-4 - it does not
+#      download anything new. If you get an error specifically in Part 7,
+#      send me the full error message and I will fix it.
 # =============================================================================
 
 
@@ -107,18 +109,15 @@ for (pkg in cran_packages) {
   }
 }
 
-# fgsea: the OFFICIAL GSEA package, used only in Part 7 for comparison.
-# msigdbr: supplies KEGG (and other collections') gene sets already
-# assembled and up to date, downloaded from the internet - this is what
-# gives the "official answer key" to compare against our hand-rolled GSEA.
-validation_packages <- c("fgsea", "msigdbr")
-for (pkg in validation_packages) {
-  if (!requireNamespace(pkg, quietly = TRUE)) {
-    cat("Installing (Bioconductor/CRAN):", pkg, "... (needs internet)\n")
-    BiocManager::install(pkg, update = FALSE, ask = FALSE)
-  } else {
-    cat("OK, already installed:", pkg, "\n")
-  }
+# fgsea: the OFFICIAL GSEA package, used only in Part 7 for comparison. It
+# is only run on gene sets we already built ourselves from org.Hs.eg.db in
+# Parts 3-4 (see Part 7 below for why) - it needs internet ONLY to install
+# the package itself, once; running it afterwards needs no internet at all.
+if (!requireNamespace("fgsea", quietly = TRUE)) {
+  cat("Installing (Bioconductor): fgsea ... (needs internet, this one time)\n")
+  BiocManager::install("fgsea", update = FALSE, ask = FALSE)
+} else {
+  cat("OK, already installed: fgsea\n")
 }
 
 cat("\n=== Loading packages into the session ===\n\n")
@@ -133,7 +132,6 @@ suppressMessages({
   library(readxl)
   library(ggrepel)
   library(fgsea)
-  library(msigdbr)
 })
 cat("All packages loaded successfully.\n\n")
 
@@ -628,166 +626,57 @@ cat("GSEA_barplot_SUI.png, shared_pathways_NES_comparison.png ===\n\n")
 
 
 ## =============================================================================
-## PART 7 (NEW): comparison with the OFFICIAL fgsea - the part that
+## PART 7 (REVISED): comparison with the OFFICIAL fgsea - the part that
 ## validates the GSEA calculation engine itself, not just the final results
 ## =============================================================================
 cat("================ PART 7: comparison with official fgsea ================\n\n")
 cat("This part runs the official Bioconductor fgsea package on the EXACT\n")
-cat("SAME ranked gene list our hand-rolled GSEA used above, but with KEGG\n")
-cat("gene sets from msigdbr (downloaded live now, not the frozen\n")
-cat("org.Hs.eg.db snapshot). If the two approaches agree, that validates\n")
-cat("the calculation engine this project has used from the start. THIS\n")
-cat("PART IS LESS TESTED than the rest of the script - there is no way to\n")
-cat("run msigdbr in the environment this project was built in (no\n")
-cat("internet there either) to check the exact data structure beforehand;\n")
-cat("if you get an error here, send me the full message.\n\n")
+cat("SAME ranked gene list AND THE EXACT SAME KEGG gene sets (from\n")
+cat("org.Hs.eg.db) our hand-rolled GSEA already used in Parts 3-4 above -\n")
+cat("no new gene sets are downloaded here. Using identical gene sets on\n")
+cat("both sides isolates the comparison to ONLY the enrichment-score/\n")
+cat("permutation algorithm, so if the two approaches agree, that validates\n")
+cat("the calculation engine this project has used from the start.\n\n")
+cat("(An earlier version of this script downloaded KEGG gene sets from\n")
+cat("msigdbr instead. msigdbr's KEGG data is not bundled in the package -\n")
+cat("it is fetched from a Zenodo-hosted file on first use, over the\n")
+cat("internet. On networks that cannot reach zenodo.org (some\n")
+cat("institutional/university networks block or fail to resolve it), that\n")
+cat("failed with 'Could not resolve host: zenodo.org', with no way around\n")
+cat("it from inside the script. Reusing the gene sets we already built\n")
+cat("sidesteps that problem entirely - Part 7 now needs no internet\n")
+cat("access at all, only the fgsea package itself already installed.)\n\n")
 
-## --- 7a: download KEGG gene sets via msigdbr -------------------------------
-## msigdbr changed its own function arguments in version 10.0.0 (category/
-## subcategory -> collection/subcollection) - hard-coding either name risks
-## breaking depending on which version is installed. Instead, this asks
-## msigdbr ITSELF what its installed version supports and what collections
-## exist, and builds the call dynamically - this should keep working even
-## if msigdbr's naming changes again in the future.
-cat("Discovering what your installed msigdbr version supports...\n")
-msigdbr_arg_names <- names(formals(msigdbr))
-cat("msigdbr() arguments in your installed version:", paste(msigdbr_arg_names, collapse = ", "), "\n")
-
-collections_tab <- as.data.frame(msigdbr_collections())
-cat("Columns in msigdbr_collections():", paste(colnames(collections_tab), collapse = ", "), "\n")
-
-# Search every column of every row for the text "KEGG", regardless of which
-# column it lives in - this does not depend on knowing the exact column name.
-kegg_row_mask <- apply(collections_tab, 1, function(r) any(grepl("kegg", r, ignore.case = TRUE)))
-kegg_rows <- collections_tab[kegg_row_mask, ]
-cat("\nRows in msigdbr_collections() mentioning KEGG:\n")
-print(kegg_rows)
-if (nrow(kegg_rows) == 0) {
-  stop(
-    "\n\nNo KEGG-related entry was found in msigdbr_collections() at all -\n",
-    "this is unexpected. Please run this manually and send me the full\n",
-    "output so I can fix this part:\n\n",
-    "  library(msigdbr)\n",
-    "  print(msigdbr_collections(), n = 100)\n\n"
-  )
-}
-# Prefer an entry that also mentions LEGACY - that's the freely
-# redistributable KEGG snapshot msigdbr can actually ship gene mappings
-# for (see README for why this caps pathway coverage around ~200).
-legacy_mask <- apply(kegg_rows, 1, function(r) any(grepl("legacy", r, ignore.case = TRUE)))
-chosen_row <- if (any(legacy_mask)) kegg_rows[legacy_mask, ][1, ] else kegg_rows[1, ]
-cat("\nSelected this collection/subcollection row:\n")
-print(chosen_row)
-
-# Figure out which columns hold the "big" grouping (e.g. "C2") and the
-# "small" grouping (e.g. "CP:KEGG_LEGACY"), whatever they happen to be
-# named in this version, then build the msigdbr() call using whichever
-# argument names this installed version actually accepts.
-col_names <- colnames(collections_tab)
-big_col   <- col_names[col_names %in% c("gs_collection", "collection", "gs_cat", "category")][1]
-small_col <- col_names[col_names %in% c("gs_subcollection", "subcollection", "gs_subcat", "subcategory")][1]
-if (is.na(big_col) || is.na(small_col)) {
-  stop(
-    "\n\nCould not identify which columns in msigdbr_collections() hold the\n",
-    "collection/subcollection grouping (checked common names, none matched\n",
-    "columns: ", paste(col_names, collapse = ", "), "). Please send me this\n",
-    "column list so I can fix this part.\n"
-  )
-}
-big_val <- chosen_row[[big_col]]
-small_val <- chosen_row[[small_col]]
-cat("Using ", big_col, " = '", big_val, "' and ", small_col, " = '", small_val, "'\n\n", sep = "")
-
-call_args <- list(species = "Homo sapiens")
-if ("collection" %in% msigdbr_arg_names) call_args$collection <- big_val
-if ("subcollection" %in% msigdbr_arg_names) call_args$subcollection <- small_val
-if ("category" %in% msigdbr_arg_names) call_args$category <- big_val
-if ("subcategory" %in% msigdbr_arg_names) call_args$subcategory <- small_val
-
-cat("Downloading KEGG gene sets via msigdbr...\n")
-kegg_sets_raw <- tryCatch(do.call(msigdbr, call_args), error = function(e) {
-  cat("msigdbr() raised an error:", conditionMessage(e), "\n")
-  NULL
-})
-if (is.null(kegg_sets_raw) || nrow(kegg_sets_raw) == 0) {
-  stop(
-    "\n\nmsigdbr() returned no data even using the arguments discovered\n",
-    "above (", big_col, "='", big_val, "', ", small_col, "='", small_val, "').\n",
-    "Please send me this full console output (including the 'Rows in\n",
-    "msigdbr_collections() mentioning KEGG' table above) so I can fix this\n",
-    "part precisely for your package version.\n"
-  )
-}
-kegg_sets_raw <- as.data.frame(kegg_sets_raw)
-cat("Columns available in the returned gene sets (diagnostic):\n")
-print(colnames(kegg_sets_raw))
-cat("\nKEGG gene sets obtained:", length(unique(kegg_sets_raw$gs_name)),
-    "pathways,", nrow(kegg_sets_raw), "pathway-gene pairs\n\n")
-
-## --- 7b: build the gene-set list in the format fgsea expects --------------
-kegg_pathways_fgsea <- split(kegg_sets_raw$gene_symbol, kegg_sets_raw$gs_name)
-
-## --- 7c: try to map gs_name -> our numeric KEGG ID (e.g. "04510") ---------
-## Candidate columns in recent msigdbr versions: gs_exact_source or
-## gs_pmid/gs_id usually carry the original source ID (e.g. "hsa04510").
-## We test the most likely ones; if none match, we fall back to comparing
-## by NAME (less exact, but always works).
-candidate_cols <- intersect(c("gs_exact_source", "gs_id", "gs_source"), colnames(kegg_sets_raw))
-id_map <- NULL
-for (cc in candidate_cols) {
-  sample_vals <- unique(kegg_sets_raw[[cc]])[1:5]
-  if (any(grepl("^hsa[0-9]{5}$", sample_vals))) {
-    cat("Using column '", cc, "' to match against our numeric IDs (e.g.: ",
-        sample_vals[grepl('^hsa[0-9]{5}$', sample_vals)][1], ")\n", sep = "")
-    id_map <- unique(kegg_sets_raw[, c("gs_name", cc)])
-    id_map$PATH5 <- sub("^hsa", "", id_map[[cc]])
-    break
-  }
-}
-
-kegg_names_tab <- read.csv("kegg_pathway_names.csv", colClasses = c("character", "character"))
-
-if (!is.null(id_map)) {
-  name_to_id <- setNames(id_map$PATH5, id_map$gs_name)
-  cat("Matched by numeric KEGG ID (more reliable) - succeeded for",
-      sum(!is.na(name_to_id)), "of", length(kegg_pathways_fgsea), "msigdbr pathways.\n\n")
-} else {
-  cat("No recognized source-ID column found - falling back to matching by\n")
-  cat("NAME (less exact: strips the 'KEGG_' prefix, replaces '_' with a\n")
-  cat("space, ignores upper/lower case).\n\n")
-  msigdbr_name_normalized <- tolower(gsub("_", " ", sub("^KEGG_", "", names(kegg_pathways_fgsea))))
-  our_name_normalized <- tolower(kegg_names_tab$Name)
-  idx <- match(msigdbr_name_normalized, our_name_normalized)
-  name_to_id <- setNames(kegg_names_tab$PATH5[idx], names(kegg_pathways_fgsea))
-  cat("Matched by name succeeded for", sum(!is.na(name_to_id)), "of",
-      length(kegg_pathways_fgsea), "msigdbr pathways.\n\n")
-}
-
-## --- 7d: run official fgsea on the SAME ranked POP gene list --------------
-cat("Running official fgsea on POP...\n")
+## --- 7a: run official fgsea on the SAME ranked POP gene list, using the
+## SAME gene_sets_pop object built from org.Hs.eg.db in Part 3 -------------
+cat("Running official fgsea on POP, with the same KEGG gene sets our own\n")
+cat("GSEA used in Part 3...\n")
 set.seed(208261)
-fgsea_pop <- fgsea(pathways = kegg_pathways_fgsea, stats = ranked_full,
-                    minSize = 5, maxSize = 200)
-fgsea_pop$PATH5 <- name_to_id[fgsea_pop$pathway]
-fgsea_pop <- fgsea_pop[!is.na(fgsea_pop$PATH5), ]
-cat("Official fgsea (POP): ", nrow(fgsea_pop), "pathways tested and matched to our ID,",
-    sum(fgsea_pop$padj < 0.25), "significant at FDR<0.25\n\n")
+fgsea_pop <- as.data.frame(fgsea(pathways = gene_sets_pop, stats = ranked_full,
+                                  minSize = 5, maxSize = 200))
+cat("Official fgsea (POP):", nrow(fgsea_pop), "pathways tested,",
+    sum(fgsea_pop$padj < 0.25, na.rm = TRUE), "significant at FDR<0.25\n\n")
 
-## --- 7e: run official fgsea on the SAME ranked SUI gene list --------------
-cat("Running official fgsea on SUI...\n")
+## --- 7b: run official fgsea on the SAME ranked SUI gene list, using the
+## SAME gene_sets_sui object built from org.Hs.eg.db in Part 4 -------------
+cat("Running official fgsea on SUI, with the same KEGG gene sets our own\n")
+cat("GSEA used in Part 4...\n")
 set.seed(2020)
-fgsea_sui <- fgsea(pathways = kegg_pathways_fgsea, stats = t_obs_sui,
-                    minSize = 5, maxSize = 200)
-fgsea_sui$PATH5 <- name_to_id[fgsea_sui$pathway]
-fgsea_sui <- fgsea_sui[!is.na(fgsea_sui$PATH5), ]
-cat("Official fgsea (SUI): ", nrow(fgsea_sui), "pathways tested and matched to our ID,",
-    sum(fgsea_sui$padj < 0.25), "significant at FDR<0.25\n\n")
+fgsea_sui <- as.data.frame(fgsea(pathways = gene_sets_sui, stats = t_obs_sui,
+                                  minSize = 5, maxSize = 200))
+cat("Official fgsea (SUI):", nrow(fgsea_sui), "pathways tested,",
+    sum(fgsea_sui$padj < 0.25, na.rm = TRUE), "significant at FDR<0.25\n\n")
 
-## --- 7f: compare side by side - our hand-rolled GSEA vs official fgsea ----
+## --- 7c: compare side by side - our hand-rolled GSEA vs official fgsea ----
+## Because both methods were given the exact same gene sets (keyed by the
+## numeric KEGG PATH id, e.g. "04510" - no name-matching or ID-mapping
+## needed, fgsea's own $pathway column already IS that same id), this
+## merge is exact.
 compare_methods <- function(ours, official, label) {
   cmp <- merge(
-    data.frame(PATH5 = ours$PATH, NES_ours = ours$NES, FDR_ours = ours$p.adjust),
-    data.frame(PATH5 = official$PATH5, NES_official = official$NES, FDR_official = official$padj),
+    data.frame(PATH5 = ours$PATH, PathwayName = ours$PathwayName,
+               NES_ours = ours$NES, FDR_ours = ours$p.adjust),
+    data.frame(PATH5 = official$pathway, NES_official = official$NES, FDR_official = official$padj),
     by = "PATH5"
   )
   cmp <- cmp[!is.na(cmp$NES_ours) & !is.na(cmp$NES_official), ]
@@ -809,7 +698,7 @@ write.csv(cmp_pop, "results/comparison_vs_official_fgsea_POP.csv", row.names = F
 cmp_sui <- compare_methods(gsea_sui, fgsea_sui, "SUI")
 write.csv(cmp_sui, "results/comparison_vs_official_fgsea_SUI.csv", row.names = FALSE)
 
-## --- 7g: comparison scatter plots (our NES vs official NES) ---------------
+## --- 7d: comparison scatter plots (our NES vs official NES) ---------------
 make_comparison_plot <- function(cmp, label) {
   ggplot(cmp, aes(x = NES_ours, y = NES_official, color = same_direction)) +
     geom_hline(yintercept = 0, color = "grey70") + geom_vline(xintercept = 0, color = "grey70") +
