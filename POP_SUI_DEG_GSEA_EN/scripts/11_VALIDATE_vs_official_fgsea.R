@@ -38,6 +38,18 @@
 # hand-rolled permutation code) because GO BP has too many terms for that
 # nested-loop approach to stay fast.
 #
+# PART 9 (also new) runs GSVA on the KEGG pathways - a per-SAMPLE pathway
+# activity score (no group label used in the scoring step itself), then
+# compared between groups with a t-test. A genuinely different statistical
+# approach from GSEA, not a re-run of it.
+#
+# PART 10 (also new) runs ORA (over-representation analysis) via
+# clusterProfiler - the same style of test the STRING website's "Analysis"
+# tab runs, and what the Zhang et al. 2024 scRNA-seq SUI paper used. Uses
+# clusterProfiler's generic enricher() with our own already-built KEGG/GO
+# gene sets (fully offline) rather than its enrichKEGG()/enrichGO()
+# convenience wrappers, which contact a live server on every call.
+#
 # HOW TO RUN THIS:
 #
 #   1. The E:\POP+SUI 63 folder already has the 3 data files. They all sit
@@ -129,11 +141,17 @@ for (pkg in cran_packages) {
 # is only run on gene sets we already built ourselves from org.Hs.eg.db in
 # Parts 3-4 (see Part 7 below for why) - it needs internet ONLY to install
 # the package itself, once; running it afterwards needs no internet at all.
-if (!requireNamespace("fgsea", quietly = TRUE)) {
-  cat("Installing (Bioconductor): fgsea ... (needs internet, this one time)\n")
-  BiocManager::install("fgsea", update = FALSE, ask = FALSE)
-} else {
-  cat("OK, already installed: fgsea\n")
+# GSVA (Part 9) and clusterProfiler (Part 10) are the same deal - installed
+# once here, but run afterwards on gene sets we already built ourselves, no
+# internet needed at run time.
+validation_pkgs <- c("fgsea", "GSVA", "clusterProfiler")
+for (pkg in validation_pkgs) {
+  if (!requireNamespace(pkg, quietly = TRUE)) {
+    cat("Installing (Bioconductor):", pkg, "... (needs internet, this one time)\n")
+    BiocManager::install(pkg, update = FALSE, ask = FALSE)
+  } else {
+    cat("OK, already installed:", pkg, "\n")
+  }
 }
 
 cat("\n=== Loading packages into the session ===\n\n")
@@ -149,6 +167,8 @@ suppressMessages({
   library(readxl)
   library(ggrepel)
   library(fgsea)
+  library(GSVA)
+  library(clusterProfiler)
 })
 cat("All packages loaded successfully.\n\n")
 
@@ -900,6 +920,152 @@ cat("Saved: figures/GO_BP_barplot_POP.png\n")
 ggsave("figures/GO_BP_barplot_SUI.png", make_go_barplot(go_sui, "GO Biological Process (fgsea) - top terms in SUI"), width = 12, height = 6.5, dpi = 300)
 cat("Saved: figures/GO_BP_barplot_SUI.png\n\n")
 
+
+## =============================================================================
+## PART 9 (NEW): GSVA (Gene Set Variation Analysis) on KEGG pathways
+## =============================================================================
+cat("================ PART 9: GSVA on KEGG pathways ================\n\n")
+cat("WHAT THIS ADDS: GSEA (Parts 3-4, 7) and ORA (Part 10 below) both start\n")
+cat("from a group comparison (POP vs Control, SUI vs Ctrl) and ask 'is this\n")
+cat("pathway shifted between the two groups'. GSVA works the other way\n")
+cat("around: for EACH INDIVIDUAL SAMPLE, it scores how active each pathway\n")
+cat("is, using only that sample's own gene ranking (no group label is used\n")
+cat("in the scoring step itself). This gives one number per (pathway,\n")
+cat("sample) - only afterwards do we compare those per-sample scores\n")
+cat("between groups (with a plain t-test here). It is a genuinely different\n")
+cat("statistical approach, not just a re-run of GSEA, which is why it is\n")
+cat("worth having as a third, independent angle on the same KEGG pathways.\n\n")
+
+## GSVA's own function interface changed between versions (older versions:
+## call gsva(expr, gene_sets, method="gsva", ...) directly; newer versions:
+## build a *Param object first, e.g. gsvaParam(expr, gene_sets), then call
+## gsva(param)) - the same kind of breaking change we already hit with
+## msigdbr. Checking which interface this installed version has, instead
+## of hard-coding one, so this keeps working either way.
+run_gsva <- function(expr, gene_sets) {
+  if (exists("gsvaParam", where = asNamespace("GSVA"), inherits = FALSE)) {
+    cat("(using the newer GSVA interface: gsvaParam() + gsva(param))\n")
+    param <- GSVA::gsvaParam(expr, gene_sets, kcdf = "Gaussian")
+    as.matrix(GSVA::gsva(param, verbose = FALSE))
+  } else {
+    cat("(using the older GSVA interface: gsva(expr, gene_sets, method='gsva'))\n")
+    as.matrix(GSVA::gsva(expr, gene_sets, method = "gsva", kcdf = "Gaussian", verbose = FALSE))
+  }
+}
+
+gsva_group_test <- function(gsva_mat, group_labels) {
+  lv <- levels(group_labels)
+  pvals <- apply(gsva_mat, 1, function(x) {
+    tryCatch(t.test(x[group_labels == lv[2]], x[group_labels == lv[1]])$p.value, error = function(e) NA)
+  })
+  data.frame(PATH = rownames(gsva_mat), PathwayName = kegg_label(rownames(gsva_mat)),
+             mean_diff = rowMeans(gsva_mat[, group_labels == lv[2], drop = FALSE]) -
+                         rowMeans(gsva_mat[, group_labels == lv[1], drop = FALSE]),
+             pvalue = pvals, padj = p.adjust(pvals, "BH"))
+}
+
+## --- 9a: GSVA on POP (using the SAME voom log-CPM matrix and the SAME
+## KEGG gene sets already built in Parts 2-3, all 24 samples) --------------
+cat("Running GSVA on POP (24 samples x", length(gene_sets_pop), "KEGG pathways)...\n")
+gsva_pop <- run_gsva(voom_fit$E, gene_sets_pop)
+gsva_pop_res <- gsva_group_test(gsva_pop, group_full)
+gsva_pop_res <- gsva_pop_res[order(gsva_pop_res$pvalue), ]
+write.csv(gsva_pop_res, "results/POP_GSVA_KEGG.csv", row.names = FALSE)
+cat("Pathways significant at FDR<0.25:", sum(gsva_pop_res$padj < 0.25, na.rm = TRUE),
+    "of", nrow(gsva_pop_res), "\n")
+cat("Pathways significant at FDR<0.05:", sum(gsva_pop_res$padj < 0.05, na.rm = TRUE), "\n\n")
+
+## --- 9b: GSVA on SUI (using the SAME normalized array matrix and the SAME
+## KEGG gene sets already built in Part 4, all 6 samples) ------------------
+cat("Running GSVA on SUI (6 samples x", length(gene_sets_sui), "KEGG pathways)...\n")
+gsva_sui <- run_gsva(sui_mat, gene_sets_sui)
+gsva_sui_res <- gsva_group_test(gsva_sui, group_sui)
+gsva_sui_res <- gsva_sui_res[order(gsva_sui_res$pvalue), ]
+write.csv(gsva_sui_res, "results/SUI_GSVA_KEGG.csv", row.names = FALSE)
+cat("Pathways significant at FDR<0.25:", sum(gsva_sui_res$padj < 0.25, na.rm = TRUE),
+    "of", nrow(gsva_sui_res), "\n")
+cat("Pathways significant at FDR<0.05:", sum(gsva_sui_res$padj < 0.05, na.rm = TRUE), "\n\n")
+cat("NOTE: with only 3 vs 3 samples, a per-pathway t-test on SUI has very\n")
+cat("little statistical power - treat the SUI GSVA p-values as suggestive,\n")
+cat("not conclusive (same caveat that applies everywhere else in this\n")
+cat("project to the SUI side of any comparison).\n\n")
+
+
+## =============================================================================
+## PART 10 (NEW): ORA (Over-Representation Analysis) via clusterProfiler
+## =============================================================================
+cat("================ PART 10: ORA via clusterProfiler ================\n\n")
+cat("WHAT THIS ADDS: GSEA/fgsea (Parts 3-4, 7-8) and GSVA (Part 9) both use\n")
+cat("the FULL ranked gene list. ORA is a third, simpler kind of test: it\n")
+cat("takes just a FIXED LIST of significant genes (POP's 163 DEG, SUI's\n")
+cat("Wei 2020 DEG list) and asks 'is this pathway over-represented in that\n")
+cat("list, compared to what would be expected by chance from the full\n")
+cat("universe of tested genes'. This is the exact same style of test the\n")
+cat("STRING website's 'Analysis' tab runs, and what the Zhang et al. 2024\n")
+cat("scRNA-seq SUI paper used (via clusterProfiler) for its GO enrichment -\n")
+cat("running it here lets you cross-check against both.\n\n")
+cat("IMPORTANT DESIGN CHOICE: clusterProfiler's own convenience functions\n")
+cat("(enrichKEGG(), enrichGO()) contact KEGG's or an online database's\n")
+cat("servers live, every time they run - not just once at install, unlike\n")
+cat("everything else in this script. To avoid a second version of the\n")
+cat("msigdbr/Zenodo problem, this uses clusterProfiler's generic enricher()\n")
+cat("function instead, with the SAME KEGG and GO gene sets already built\n")
+cat("from org.Hs.eg.db earlier in this script - fully offline.\n\n")
+
+## --- 10a: build TERM2GENE / TERM2NAME tables from what we already have ---
+gene_sets_to_term2gene <- function(gene_sets) {
+  do.call(rbind, lapply(names(gene_sets), function(nm) data.frame(term = nm, gene = gene_sets[[nm]])))
+}
+kegg_term2gene <- gene_sets_to_term2gene(gene_sets_pop)
+kegg_term2name <- data.frame(term = kegg_tab$PATH5, name = kegg_tab$Name)
+go_term2gene <- gene_sets_to_term2gene(gene_sets_go)
+go_term2name <- data.frame(term = names(gene_sets_go), name = go_term_name(names(gene_sets_go)))
+
+## --- 10b: ORA on POP (proper universe available: all 22,253 tested genes) -
+cat("Running ORA on POP's 163 DEG (universe = all", nrow(pop_full), "genes DESeq2 tested)...\n")
+ora_kegg_pop <- as.data.frame(clusterProfiler::enricher(
+  gene = pop_deg$Gene, universe = pop_full$Gene,
+  TERM2GENE = kegg_term2gene, TERM2NAME = kegg_term2name,
+  pAdjustMethod = "BH", pvalueCutoff = 1, qvalueCutoff = 1))
+write.csv(ora_kegg_pop, "results/POP_ORA_KEGG.csv", row.names = FALSE)
+cat("KEGG pathways significant at FDR<0.25:", sum(ora_kegg_pop$p.adjust < 0.25, na.rm = TRUE),
+    "of", nrow(ora_kegg_pop), "\n")
+
+ora_go_pop <- as.data.frame(clusterProfiler::enricher(
+  gene = pop_deg$Gene, universe = pop_full$Gene,
+  TERM2GENE = go_term2gene, TERM2NAME = go_term2name,
+  pAdjustMethod = "BH", pvalueCutoff = 1, qvalueCutoff = 1))
+write.csv(ora_go_pop, "results/POP_ORA_GO_BP.csv", row.names = FALSE)
+cat("GO BP terms significant at FDR<0.25:", sum(ora_go_pop$p.adjust < 0.25, na.rm = TRUE),
+    "of", nrow(ora_go_pop), "\n\n")
+
+## --- 10c: ORA on SUI (NO proper universe available - see note below) -----
+cat("Running ORA on SUI's DEG list (", nrow(sui_full), "genes)...\n")
+cat("CAVEAT (same data limitation documented since Part 4): Wei 2020 never\n")
+cat("published the full array background, only their own already-\n")
+cat("significant DEG list. Without a real universe, enricher() falls back\n")
+cat("to using every gene annotated in org.Hs.eg.db as the background, which\n")
+cat("is NOT the actual array that was tested - this makes the SUI ORA\n")
+cat("p-values anti-conservative (biased toward looking MORE significant\n")
+cat("than they really are). Treat results/SUI_ORA_*.csv as qualitative /\n")
+cat("hypothesis-generating only, not as rigorously FDR-controlled - this\n")
+cat("is a limitation of the published SUI data, not of this code.\n\n")
+ora_kegg_sui <- as.data.frame(clusterProfiler::enricher(
+  gene = sui_full$GeneSymbol,
+  TERM2GENE = kegg_term2gene, TERM2NAME = kegg_term2name,
+  pAdjustMethod = "BH", pvalueCutoff = 1, qvalueCutoff = 1))
+write.csv(ora_kegg_sui, "results/SUI_ORA_KEGG.csv", row.names = FALSE)
+cat("KEGG pathways significant at FDR<0.25:", sum(ora_kegg_sui$p.adjust < 0.25, na.rm = TRUE),
+    "of", nrow(ora_kegg_sui), "(caveat above applies)\n")
+
+ora_go_sui <- as.data.frame(clusterProfiler::enricher(
+  gene = sui_full$GeneSymbol,
+  TERM2GENE = go_term2gene, TERM2NAME = go_term2name,
+  pAdjustMethod = "BH", pvalueCutoff = 1, qvalueCutoff = 1))
+write.csv(ora_go_sui, "results/SUI_ORA_GO_BP.csv", row.names = FALSE)
+cat("GO BP terms significant at FDR<0.25:", sum(ora_go_sui$p.adjust < 0.25, na.rm = TRUE),
+    "of", nrow(ora_go_sui), "(caveat above applies)\n\n")
+
 cat("=================================================================\n")
 cat("=== END OF SCRIPT ===\n")
 cat("Check the numbers marked 'Expected value, already documented' above\n")
@@ -910,8 +1076,12 @@ cat("(>80%) between our NES and the official fgsea NES indicates the GSEA\n")
 cat("calculation engine reimplemented in this project is correct. A strong\n")
 cat("mismatch would call for investigation - send me both CSVs\n")
 cat("(results/comparison_vs_official_fgsea_POP.csv and _SUI.csv) if that happens.\n\n")
-cat("Part 8 (GO Biological Process) is a NEW analysis, not a re-validation of\n")
-cat("anything above - check results/shared_GO_BP_FDR025.csv and the 'ECM\n")
-cat("hypothesis terms' printout above for anything directly relevant to a\n")
-cat("connective-tissue angle that KEGG's broader pathways do not capture.\n")
+cat("Part 8 (GO Biological Process), Part 9 (GSVA) and Part 10 (ORA) are NEW\n")
+cat("analyses, not re-validations of anything above. With thousands of GO\n")
+cat("terms tested, expect the 'shared between POP and SUI' lists to look\n")
+cat("thin even when both diseases show real, biologically coherent signal\n")
+cat("individually - requiring FDR<0.25 in BOTH datasets independently is a\n")
+cat("much harder bar with ~2,000-4,000 tests than with KEGG's 218. Check\n")
+cat("each pathway/term of interest in the POP-only and SUI-only files too,\n")
+cat("not only the 'shared' files, before concluding there is no overlap.\n")
 cat("=================================================================\n")
