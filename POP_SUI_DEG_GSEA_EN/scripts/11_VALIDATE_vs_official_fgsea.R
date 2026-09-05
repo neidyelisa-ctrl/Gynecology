@@ -137,18 +137,36 @@ for (pkg in cran_packages) {
   }
 }
 
-# fgsea: the OFFICIAL GSEA package, used only in Part 7 for comparison. It
-# is only run on gene sets we already built ourselves from org.Hs.eg.db in
-# Parts 3-4 (see Part 7 below for why) - it needs internet ONLY to install
-# the package itself, once; running it afterwards needs no internet at all.
-# GSVA (Part 9) and clusterProfiler (Part 10) are the same deal - installed
-# once here, but run afterwards on gene sets we already built ourselves, no
-# internet needed at run time.
+# fgsea: the OFFICIAL GSEA package, used only in Parts 7-8 for comparison.
+# It is only run on gene sets we already built ourselves from org.Hs.eg.db
+# in Parts 3-4 (see Part 7 below for why) - it needs internet ONLY to
+# install the package itself, once; running it afterwards needs no
+# internet at all. GSVA (Part 9) and clusterProfiler (Part 10) are the
+# same deal - installed once here, but run afterwards on gene sets we
+# already built ourselves, no internet needed at run time.
+#
+# THESE THREE ARE OPTIONAL EXTRAS, NOT REQUIRED for the core analysis
+# (Parts 1-6, which is everything this project's main results rest on).
+# Some of their own dependencies compile C/C++/Fortran code from source,
+# which on Windows needs Rtools installed and correctly matched to your R
+# version - if that is missing or mismatched, the install below will
+# print warnings and simply not succeed for that one package. Rather than
+# letting a failed install crash the WHOLE script later at library(), we
+# just record which of the three actually succeeded, and Parts 7-10 each
+# check their own flag below and skip themselves (with a clear message)
+# if their package did not install - everything else in this script runs
+# regardless. If you want a skipped part working, the fix is almost
+# always: install Rtools matching your R version from
+# https://cran.r-project.org/bin/windows/Rtools/, restart R, and re-run
+# this script (already-installed packages are skipped automatically).
 validation_pkgs <- c("fgsea", "GSVA", "clusterProfiler")
 for (pkg in validation_pkgs) {
   if (!requireNamespace(pkg, quietly = TRUE)) {
     cat("Installing (Bioconductor):", pkg, "... (needs internet, this one time)\n")
-    BiocManager::install(pkg, update = FALSE, ask = FALSE)
+    tryCatch(
+      BiocManager::install(pkg, update = FALSE, ask = FALSE),
+      error = function(e) cat("Install of", pkg, "raised an error - will be skipped:", conditionMessage(e), "\n")
+    )
   } else {
     cat("OK, already installed:", pkg, "\n")
   }
@@ -166,11 +184,22 @@ suppressMessages({
   library(pheatmap)
   library(readxl)
   library(ggrepel)
-  library(fgsea)
-  library(GSVA)
-  library(clusterProfiler)
 })
-cat("All packages loaded successfully.\n\n")
+cat("Core packages loaded successfully (Parts 1-6 only need these).\n\n")
+
+# Optional packages: only load what actually installed. has_fgsea /
+# has_GSVA / has_clusterProfiler gate Parts 7-10 further down - each part
+# checks its own flag and skips itself cleanly if FALSE.
+has_fgsea <- requireNamespace("fgsea", quietly = TRUE)
+has_GSVA <- requireNamespace("GSVA", quietly = TRUE)
+has_clusterProfiler <- requireNamespace("clusterProfiler", quietly = TRUE)
+if (has_fgsea) suppressMessages(library(fgsea))
+if (has_GSVA) suppressMessages(library(GSVA))
+if (has_clusterProfiler) suppressMessages(library(clusterProfiler))
+cat("Optional packages - fgsea:", has_fgsea, "| GSVA:", has_GSVA,
+    "| clusterProfiler:", has_clusterProfiler, "\n")
+cat("(FALSE means that package's part(s) further down will be skipped -\n")
+cat("this does not affect Parts 1-6, the core analysis.)\n\n")
 
 # select() exists in more than one loaded package (AnnotationDbi and, if you
 # have the tidyverse installed, dplyr too) - explicitly forcing which one to
@@ -684,6 +713,13 @@ cat("it from inside the script. Reusing the gene sets we already built\n")
 cat("sidesteps that problem entirely - Part 7 now needs no internet\n")
 cat("access at all, only the fgsea package itself already installed.)\n\n")
 
+if (!has_fgsea) {
+  cat("fgsea is not installed/available in this R session - SKIPPING Part 7\n")
+  cat("entirely. This does not affect Parts 1-6 (the core, already-\n")
+  cat("validated analysis). To enable this part, see the note in Part 0\n")
+  cat("about installing Rtools, then re-run this script.\n\n")
+} else {
+
 ## --- 7a: run official fgsea on the SAME ranked POP gene list, using the
 ## SAME gene_sets_pop object built from org.Hs.eg.db in Part 3 -------------
 cat("Running official fgsea on POP, with the same KEGG gene sets our own\n")
@@ -784,6 +820,8 @@ if (nrow(cmp_sui) >= 2) {
 }
 cat("\n")
 
+} # end if (has_fgsea) - Part 7
+
 
 ## =============================================================================
 ## PART 8 (NEW): GO Biological Process enrichment - via the OFFICIAL fgsea
@@ -826,6 +864,14 @@ go_term_name <- function(ids) {
   nm <- suppressMessages(tryCatch(AnnotationDbi::Term(ids), error = function(e) rep(NA_character_, length(ids))))
   unname(ifelse(is.na(nm), ids, paste0(ids, " - ", nm)))
 }
+
+if (!has_fgsea) {
+  cat("fgsea is not installed/available in this R session - SKIPPING the\n")
+  cat("rest of Part 8 (running fgsea on the GO gene sets just built above).\n")
+  cat("gene_sets_go itself was still built (needed by Part 10's ORA) - only\n")
+  cat("the fgsea-based enrichment here is skipped. This does not affect\n")
+  cat("Parts 1-6 (the core, already-validated analysis).\n\n")
+} else {
 
 ## --- 8b: run fgsea (GO Biological Process) on POP --------------------------
 cat("Running official fgsea (GO Biological Process) on POP...\n")
@@ -920,6 +966,8 @@ cat("Saved: figures/GO_BP_barplot_POP.png\n")
 ggsave("figures/GO_BP_barplot_SUI.png", make_go_barplot(go_sui, "GO Biological Process (fgsea) - top terms in SUI"), width = 12, height = 6.5, dpi = 300)
 cat("Saved: figures/GO_BP_barplot_SUI.png\n\n")
 
+} # end if (has_fgsea) - Part 8b-8f
+
 
 ## =============================================================================
 ## PART 9 (NEW): GSVA (Gene Set Variation Analysis) on KEGG pathways
@@ -935,6 +983,14 @@ cat("sample) - only afterwards do we compare those per-sample scores\n")
 cat("between groups (with a plain t-test here). It is a genuinely different\n")
 cat("statistical approach, not just a re-run of GSEA, which is why it is\n")
 cat("worth having as a third, independent angle on the same KEGG pathways.\n\n")
+
+if (!has_GSVA) {
+  cat("GSVA is not installed/available in this R session - SKIPPING Part 9\n")
+  cat("entirely. This is usually a Windows compilation issue (GSVA's own\n")
+  cat("dependencies, e.g. S4Vectors/h5mread, need Rtools to build from\n")
+  cat("source) - see the note in Part 0. This does not affect Parts 1-6\n")
+  cat("(the core, already-validated analysis) or Parts 7-8/10.\n\n")
+} else {
 
 ## GSVA's own function interface changed between versions (older versions:
 ## call gsva(expr, gene_sets, method="gsva", ...) directly; newer versions:
@@ -990,6 +1046,8 @@ cat("little statistical power - treat the SUI GSVA p-values as suggestive,\n")
 cat("not conclusive (same caveat that applies everywhere else in this\n")
 cat("project to the SUI side of any comparison).\n\n")
 
+} # end if (has_GSVA) - Part 9
+
 
 ## =============================================================================
 ## PART 10 (NEW): ORA (Over-Representation Analysis) via clusterProfiler
@@ -1011,6 +1069,12 @@ cat("everything else in this script. To avoid a second version of the\n")
 cat("msigdbr/Zenodo problem, this uses clusterProfiler's generic enricher()\n")
 cat("function instead, with the SAME KEGG and GO gene sets already built\n")
 cat("from org.Hs.eg.db earlier in this script - fully offline.\n\n")
+
+if (!has_clusterProfiler) {
+  cat("clusterProfiler is not installed/available in this R session -\n")
+  cat("SKIPPING Part 10 entirely. This does not affect Parts 1-6 (the core,\n")
+  cat("already-validated analysis) or Parts 7-9.\n\n")
+} else {
 
 ## --- 10a: build TERM2GENE / TERM2NAME tables from what we already have ---
 gene_sets_to_term2gene <- function(gene_sets) {
@@ -1066,11 +1130,20 @@ write.csv(ora_go_sui, "results/SUI_ORA_GO_BP.csv", row.names = FALSE)
 cat("GO BP terms significant at FDR<0.25:", sum(ora_go_sui$p.adjust < 0.25, na.rm = TRUE),
     "of", nrow(ora_go_sui), "(caveat above applies)\n\n")
 
+} # end if (has_clusterProfiler) - Part 10
+
 cat("=================================================================\n")
 cat("=== END OF SCRIPT ===\n")
 cat("Check the numbers marked 'Expected value, already documented' above\n")
 cat("against what came out on your computer (Parts 1-6). If they match,\n")
-cat("the main analysis is independently validated.\n\n")
+cat("the main analysis is independently validated - this part NEVER\n")
+cat("depends on fgsea/GSVA/clusterProfiler and always runs in full.\n\n")
+cat("Optional packages actually available this run - fgsea:", has_fgsea,
+    "| GSVA:", has_GSVA, "| clusterProfiler:", has_clusterProfiler, "\n")
+cat("Any FALSE above means the corresponding part(s) were skipped (with\n")
+cat("their own message earlier in this log) rather than crashing the rest\n")
+cat("of the script. If you want a skipped part working, see the Rtools\n")
+cat("note in Part 0, then re-run.\n\n")
 cat("In Part 7, a high correlation (>0.8) and high direction agreement\n")
 cat("(>80%) between our NES and the official fgsea NES indicates the GSEA\n")
 cat("calculation engine reimplemented in this project is correct. A strong\n")
