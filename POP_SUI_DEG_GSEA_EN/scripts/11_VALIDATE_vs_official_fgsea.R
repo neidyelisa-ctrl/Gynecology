@@ -1155,6 +1155,117 @@ cat("GO BP terms significant at FDR<0.25:", sum(ora_go_sui$p.adjust < 0.25, na.r
 
 } # end if (has_clusterProfiler) - Part 10
 
+
+## =============================================================================
+## PART 11 (NEW): presentation figures - volcano (POP+SUI), expression
+## heatmaps (POP+SUI), and pathway-level figures via fgsea ONLY (never the
+## hand-rolled GSEA)
+## =============================================================================
+cat("================ PART 11: presentation figures ================\n\n")
+cat("Everything in this part uses either the DEG tables (Parts 2 and 4) or\n")
+cat("the OFFICIAL fgsea results (Part 7-8) - none of it uses the hand-\n")
+cat("rolled GSEA (gsea_pop/gsea_sui) that Parts 3-4 also computed. That is\n")
+cat("intentional: these figures are meant to justify the work to an\n")
+cat("audience that should see only the peer-reviewed tool's numbers.\n\n")
+
+## --- 11a: volcano plot - SUI (parallel to the POP one in Part 6) ---------
+sui_full$sig <- "NS"
+sui_full$sig[sui_full$logFC > 1 & sui_full$FDR < 0.05] <- "Up"
+sui_full$sig[sui_full$logFC < -1 & sui_full$FDR < 0.05] <- "Down"
+sui_full$sig <- factor(sui_full$sig, levels = c("Down", "NS", "Up"))
+p_volcano_sui <- ggplot(sui_full, aes(x = logFC, y = -log10(PValue), color = sig)) +
+  geom_point(alpha = 0.6, size = 1.2) +
+  scale_color_manual(values = c(Down = "#2166AC", NS = "grey75", Up = "#B2182B")) +
+  geom_vline(xintercept = c(-1, 1), linetype = "dashed", color = "grey40") +
+  labs(title = paste0("Volcano - SUI (Wei 2020, 3x3), ",
+                       sum(sui_full$sig != "NS"), " genes at |log2FC|>1 & FDR<0.05"),
+       x = "log2(Fold Change)", y = "-log10(p-value)", color = NULL) +
+  theme_bw() + theme(legend.position = "top")
+ggsave("figures/volcano_SUI.png", p_volcano_sui, width = 8, height = 6, dpi = 300)
+cat("Saved: figures/volcano_SUI.png\n\n")
+
+## --- 11b: expression heatmap - top DEG, POP (24 samples) -----------------
+## Uses the SAME voom log-CPM matrix as everywhere else in this script (no
+## new normalization). Z-scored per gene (row) so the heatmap shows
+## relative up/down pattern across samples, not absolute expression level.
+top_n_heatmap <- min(40, nrow(pop_deg))
+top_genes_pop <- pop_deg$Gene[order(pop_deg$adj.P.Val)][seq_len(top_n_heatmap)]
+mat_pop <- voom_fit$E[top_genes_pop, , drop = FALSE]
+mat_pop_z <- t(scale(t(mat_pop)))
+ann_col_pop <- data.frame(Group = group_full, row.names = colnames(mat_pop_z))
+png("figures/heatmap_POP_topDEG.png", width = 2400, height = 3000, res = 300)
+pheatmap(mat_pop_z, annotation_col = ann_col_pop, show_colnames = FALSE,
+         main = paste0("Top ", top_n_heatmap, " DEG (by FDR) - POP vs Control (z-score)"),
+         fontsize_row = 7, color = colorRampPalette(c("#2166AC", "white", "#B2182B"))(100))
+dev.off()
+cat("Saved: figures/heatmap_POP_topDEG.png\n\n")
+
+## --- 11c: expression heatmap - top DEG, SUI (6 samples) ------------------
+top_genes_sui <- sui_full$GeneSymbol[order(sui_full$FDR)][seq_len(min(40, nrow(sui_full)))]
+top_genes_sui <- intersect(top_genes_sui, rownames(sui_mat))
+mat_sui <- sui_mat[top_genes_sui, , drop = FALSE]
+mat_sui_z <- t(scale(t(mat_sui)))
+ann_col_sui <- data.frame(Group = group_sui, row.names = colnames(mat_sui_z))
+png("figures/heatmap_SUI_topDEG.png", width = 2400, height = 3000, res = 300)
+pheatmap(mat_sui_z, annotation_col = ann_col_sui, show_colnames = TRUE,
+         main = paste0("Top ", length(top_genes_sui), " DEG (by FDR) - SUI vs Ctrl (z-score)"),
+         fontsize_row = 7, color = colorRampPalette(c("#2166AC", "white", "#B2182B"))(100))
+dev.off()
+cat("Saved: figures/heatmap_SUI_topDEG.png\n\n")
+
+if (!has_fgsea) {
+  cat("fgsea is not installed/available in this R session - SKIPPING the\n")
+  cat("fgsea-based pathway figures below (11d-11e). The volcano and\n")
+  cat("expression heatmaps above were still generated (they do not need\n")
+  cat("fgsea).\n\n")
+} else {
+
+## --- 11d: KEGG pathway barplots via OFFICIAL fgsea (POP + SUI) -----------
+## Same visual style as the Part 6 barplots, but built from fgsea_pop /
+## fgsea_sui (Part 7) instead of the hand-rolled gsea_pop / gsea_sui.
+make_fgsea_barplot <- function(fgsea_res, title, n_top = 15) {
+  fgsea_res <- fgsea_res[!is.na(fgsea_res$NES), ]
+  d <- head(fgsea_res[order(fgsea_res$pval), ], n_top)
+  d$Sig <- ifelse(d$padj < 0.05, "FDR<0.05", ifelse(d$padj < 0.25, "FDR<0.25", "NS"))
+  d$Label <- factor(kegg_label(d$pathway), levels = rev(kegg_label(d$pathway)))
+  ggplot(d, aes(x = NES, y = Label, fill = Sig)) +
+    geom_col() +
+    scale_fill_manual(values = c("FDR<0.05" = "#B2182B", "FDR<0.25" = "#F4A582", "NS" = "grey70")) +
+    geom_vline(xintercept = 0, color = "grey30") +
+    labs(title = title, x = "Normalized Enrichment Score (NES)", y = NULL, fill = "Significance") +
+    theme_bw() + theme(axis.text.y = element_text(size = 8), plot.title = element_text(size = 12))
+}
+ggsave("figures/fgsea_KEGG_barplot_POP.png",
+       make_fgsea_barplot(fgsea_pop, "GSEA via fgsea (official) - top KEGG pathways in POP"),
+       width = 12, height = 6.5, dpi = 300)
+cat("Saved: figures/fgsea_KEGG_barplot_POP.png\n")
+ggsave("figures/fgsea_KEGG_barplot_SUI.png",
+       make_fgsea_barplot(fgsea_sui, "GSEA via fgsea (official) - top KEGG pathways in SUI"),
+       width = 12, height = 6.5, dpi = 300)
+cat("Saved: figures/fgsea_KEGG_barplot_SUI.png\n\n")
+
+## --- 11e: shared-pathway NES heatmap (fgsea only, from shared_025_fixed) -
+## shared_025_fixed was built in Part 7c: same pathway list as the old
+## Part 5 table, NES/direction taken from fgsea (no NA).
+heatmap_mat <- as.matrix(shared_025_fixed[, c("NES_POP", "NES_SUI")])
+rownames(heatmap_mat) <- kegg_label(shared_025_fixed$PATH)
+colnames(heatmap_mat) <- c("POP", "SUI")
+png("figures/heatmap_shared_KEGG_NES_fgsea.png", width = 2600, height = 2600, res = 300)
+pheatmap(heatmap_mat, cluster_cols = FALSE,
+         main = "Shared KEGG pathways - NES (fgsea) in POP vs SUI",
+         fontsize_row = 8, color = colorRampPalette(c("#2166AC", "white", "#B2182B"))(100))
+dev.off()
+cat("Saved: figures/heatmap_shared_KEGG_NES_fgsea.png\n\n")
+
+} # end if (has_fgsea) - Part 11d-11e
+
+cat("=== Part 11 figures saved (see figures/ folder): volcano_SUI.png,\n")
+cat("heatmap_POP_topDEG.png, heatmap_SUI_topDEG.png, and (if fgsea is\n")
+cat("available) fgsea_KEGG_barplot_POP.png, fgsea_KEGG_barplot_SUI.png,\n")
+cat("heatmap_shared_KEGG_NES_fgsea.png. GO Biological Process barplots\n")
+cat("(also fgsea-based) were already saved in Part 8: GO_BP_barplot_POP.png\n")
+cat("and GO_BP_barplot_SUI.png.\n\n")
+
 cat("=================================================================\n")
 cat("=== END OF SCRIPT ===\n")
 cat("Check the numbers marked 'Expected value, already documented' above\n")
