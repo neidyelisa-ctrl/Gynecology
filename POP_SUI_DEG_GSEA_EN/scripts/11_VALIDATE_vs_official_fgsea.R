@@ -627,20 +627,36 @@ cat("================ PART 6: figures ================\n\n")
 cat("All figures are saved into the 'figures' subfolder of your working\n")
 cat("directory (", getwd(), "\\figures) - same folder as the results CSVs.\n\n", sep = "")
 
-## --- 6a: volcano plot (POP DEG) --------------------------------------------
+## --- 6a: volcano plot (POP DEG), with gene-symbol labels for the top
+## significant Up and Down genes -------------------------------------------
 pop_full$sig <- "NS"
 pop_full$sig[pop_full$logFC > 1 & pop_full$adj.P.Val < 0.05] <- "Up"
 pop_full$sig[pop_full$logFC < -1 & pop_full$adj.P.Val < 0.05] <- "Down"
 pop_full$sig <- factor(pop_full$sig, levels = c("Down", "NS", "Up"))
+
+## Label only the TOP genes (by adjusted p-value) on each side - labeling
+## all 163 DEG would make the plot unreadable. n_label_each controls how
+## many Up and how many Down gene names are drawn; raise/lower it here if
+## the plot looks too crowded or too sparse.
+n_label_each <- 15
+top_up_pop <- pop_full[pop_full$sig == "Up", ]
+top_up_pop <- top_up_pop[order(top_up_pop$adj.P.Val), ][seq_len(min(n_label_each, nrow(top_up_pop))), ]
+top_down_pop <- pop_full[pop_full$sig == "Down", ]
+top_down_pop <- top_down_pop[order(top_down_pop$adj.P.Val), ][seq_len(min(n_label_each, nrow(top_down_pop))), ]
+labels_pop <- rbind(top_up_pop, top_down_pop)
+
 p_volcano <- ggplot(pop_full, aes(x = logFC, y = -log10(P.Value), color = sig)) +
   geom_point(alpha = 0.6, size = 1.2) +
   scale_color_manual(values = c(Down = "#2166AC", NS = "grey75", Up = "#B2182B")) +
   geom_vline(xintercept = c(-1, 1), linetype = "dashed", color = "grey40") +
+  ggrepel::geom_text_repel(data = labels_pop, aes(label = Gene), size = 2.8,
+                            max.overlaps = 100, segment.size = 0.2, show.legend = FALSE) +
   labs(title = paste0("Volcano - POP (GSE208261, 12x12), ", nrow(pop_deg), " DEG at FDR<0.05"),
+       subtitle = paste0("Top ", nrow(top_up_pop), " Up and top ", nrow(top_down_pop), " Down genes labeled (by FDR)"),
        x = "log2(Fold Change)", y = "-log10(p-value)", color = NULL) +
   theme_bw() + theme(legend.position = "top")
-ggsave("figures/volcano_POP.png", p_volcano, width = 8, height = 6, dpi = 300)
-cat("Saved: figures/volcano_POP.png\n\n")
+ggsave("figures/volcano_POP.png", p_volcano, width = 9, height = 7, dpi = 300)
+cat("Saved: figures/volcano_POP.png (", nrow(top_up_pop), "Up +", nrow(top_down_pop), "Down gene names labeled )\n\n")
 
 ## --- 6b: GSEA barplots (top 15 pathways by p-value, POP and SUI) -----------
 make_gsea_barplot <- function(gsea_res, title, n_top = 15) {
@@ -1168,21 +1184,36 @@ cat("rolled GSEA (gsea_pop/gsea_sui) that Parts 3-4 also computed. That is\n")
 cat("intentional: these figures are meant to justify the work to an\n")
 cat("audience that should see only the peer-reviewed tool's numbers.\n\n")
 
-## --- 11a: volcano plot - SUI (parallel to the POP one in Part 6) ---------
+## --- 11a: volcano plot - SUI (parallel to the POP one in Part 6), with
+## gene-symbol labels for the top significant Up and Down genes -----------
 sui_full$sig <- "NS"
 sui_full$sig[sui_full$logFC > 1 & sui_full$FDR < 0.05] <- "Up"
 sui_full$sig[sui_full$logFC < -1 & sui_full$FDR < 0.05] <- "Down"
 sui_full$sig <- factor(sui_full$sig, levels = c("Down", "NS", "Up"))
+
+## Same idea as the POP volcano (Part 6a): label only the top N genes by
+## FDR on each side, not all of them (SUI has thousands passing this cutoff
+## - see the caveat printed in Part 4 about Wei 2020's list already being
+## pre-filtered to significant genes only).
+top_up_sui <- sui_full[sui_full$sig == "Up", ]
+top_up_sui <- top_up_sui[order(top_up_sui$FDR), ][seq_len(min(n_label_each, nrow(top_up_sui))), ]
+top_down_sui <- sui_full[sui_full$sig == "Down", ]
+top_down_sui <- top_down_sui[order(top_down_sui$FDR), ][seq_len(min(n_label_each, nrow(top_down_sui))), ]
+labels_sui <- rbind(top_up_sui, top_down_sui)
+
 p_volcano_sui <- ggplot(sui_full, aes(x = logFC, y = -log10(PValue), color = sig)) +
   geom_point(alpha = 0.6, size = 1.2) +
   scale_color_manual(values = c(Down = "#2166AC", NS = "grey75", Up = "#B2182B")) +
   geom_vline(xintercept = c(-1, 1), linetype = "dashed", color = "grey40") +
+  ggrepel::geom_text_repel(data = labels_sui, aes(label = GeneSymbol), size = 2.8,
+                            max.overlaps = 100, segment.size = 0.2, show.legend = FALSE) +
   labs(title = paste0("Volcano - SUI (Wei 2020, 3x3), ",
                        sum(sui_full$sig != "NS"), " genes at |log2FC|>1 & FDR<0.05"),
+       subtitle = paste0("Top ", nrow(top_up_sui), " Up and top ", nrow(top_down_sui), " Down genes labeled (by FDR)"),
        x = "log2(Fold Change)", y = "-log10(p-value)", color = NULL) +
   theme_bw() + theme(legend.position = "top")
-ggsave("figures/volcano_SUI.png", p_volcano_sui, width = 8, height = 6, dpi = 300)
-cat("Saved: figures/volcano_SUI.png\n\n")
+ggsave("figures/volcano_SUI.png", p_volcano_sui, width = 9, height = 7, dpi = 300)
+cat("Saved: figures/volcano_SUI.png (", nrow(top_up_sui), "Up +", nrow(top_down_sui), "Down gene names labeled )\n\n")
 
 ## --- 11b: expression heatmap - top DEG, POP (24 samples) -----------------
 ## Uses the SAME voom log-CPM matrix as everywhere else in this script (no
