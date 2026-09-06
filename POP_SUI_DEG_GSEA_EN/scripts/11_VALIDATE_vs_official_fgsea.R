@@ -828,7 +828,40 @@ cat("Same_direction_fgsea -", sum(shared_025_fixed$Same_direction_fgsea), "conco
     "are ALSO significant in both diseases by fgsea's own FDR<0.25 -\n")
 cat("that smaller number is the one to quote as 'doubly fgsea-significant'.\n\n")
 
-## --- 7d: compare side by side - our hand-rolled GSEA vs official fgsea ----
+## --- 7d: THE definitive, complete, small table: every pathway fgsea
+## calls significant (FDR<0.25) in BOTH POP and SUI - searched across ALL
+## tested pathways, not just the old 21-row hand-rolled list above -------
+## IMPORTANT: shared_025_fixed above can ONLY ever show a subset of this
+## - it starts from the OLD hand-rolled "shared" list (21 pathways) and
+## checks fgsea significance only among THOSE. Any pathway fgsea considers
+## doubly-significant but that the old hand-rolled method never flagged as
+## "shared" in the first place (e.g. Ribosome, Protein processing in ER,
+## Glycolysis/Gluconeogenesis, Metabolism of xenobiotics by cytochrome
+## P450 - all real fgsea hits, none of them in the old 21-pathway list)
+## is INVISIBLE to that table by construction - not because of the FDR
+## cutoff, but because that table never looks outside the old list. This
+## table searches all ~198 pathways tested in both diseases, so nothing
+## is missed - and because it's filtered to significant rows only, it
+## stays small (expect roughly 5-10 rows, not hundreds).
+cat("Building the complete list of pathways fgsea calls significant\n")
+cat("(FDR<0.25) in BOTH POP and SUI, searched across ALL tested pathways\n")
+cat("(not just the old hand-rolled 'shared' list above)...\n")
+kegg_common <- merge(
+  data.frame(PATH = fgsea_pop$pathway, PathwayName = kegg_label(fgsea_pop$pathway),
+             NES_POP = fgsea_pop$NES, padj_POP = fgsea_pop$padj),
+  data.frame(PATH = fgsea_sui$pathway, NES_SUI = fgsea_sui$NES, padj_SUI = fgsea_sui$padj),
+  by = "PATH"
+)
+kegg_both_significant <- subset(kegg_common, padj_POP < 0.25 & padj_SUI < 0.25)
+kegg_both_significant$Same_direction <- sign(kegg_both_significant$NES_POP) == sign(kegg_both_significant$NES_SUI)
+kegg_both_significant <- kegg_both_significant[order(pmin(kegg_both_significant$padj_POP, kegg_both_significant$padj_SUI)), ]
+write.csv(kegg_both_significant, "results/KEGG_significant_in_BOTH_diseases_fgsea.csv", row.names = FALSE)
+cat("Saved: results/KEGG_significant_in_BOTH_diseases_fgsea.csv (", nrow(kegg_both_significant),
+    "pathways - this IS the complete, correct answer to 'how many pathways\n")
+cat("does fgsea call significant in both diseases', out of", nrow(kegg_common), "pathways tested in both -",
+    sum(kegg_both_significant$Same_direction), "of", nrow(kegg_both_significant), "are direction-concordant )\n\n")
+
+## --- 7e: compare side by side - our hand-rolled GSEA vs official fgsea ----
 ## Because both methods were given the exact same gene sets (keyed by the
 ## numeric KEGG PATH id, e.g. "04510" - no name-matching or ID-mapping
 ## needed, fgsea's own $pathway column already IS that same id), this
@@ -1335,32 +1368,46 @@ if (!has_fgsea) {
   cat("Parts 1-6 or 11's DEG-based figures.\n\n")
 } else {
 
-## --- 12a: KEGG barplot for POP at FDR<0.25 (not just the top-15-by-p-
-## value plot from Part 11, which is dominated by the strongest hits and
-## can leave out biologically important but more moderate pathways) ------
-cat("Building the POP KEGG barplot at the looser FDR<0.25 bar (Part 11's\n")
-cat("fgsea_KEGG_barplot_POP.png only shows the top 15 by p-value, which is\n")
-cat("dominated by ribosome/metabolism pathways and can leave out moderate-\n")
-cat("but-real hits like Focal adhesion)...\n")
-make_fgsea_barplot_fdr025 <- function(fgsea_res, title, n_top = 25) {
-  fgsea_res <- fgsea_res[!is.na(fgsea_res$NES) & fgsea_res$padj < 0.25, ]
-  d <- head(fgsea_res[order(fgsea_res$pval), ], n_top)
-  d$Sig <- ifelse(d$padj < 0.05, "FDR<0.05", "FDR<0.25")
-  d$Label <- factor(kegg_label(d$pathway), levels = rev(kegg_label(d$pathway)))
-  ggplot(d, aes(x = NES, y = Label, fill = Sig)) +
+## --- 12a: KEGG barplot for POP, split into a STRONG band (FDR<0.05) and
+## a MODERATE band (FDR 0.05-0.25), each ranked and shown separately -----
+## An earlier version of this figure ranked ALL FDR<0.25 pathways together
+## by p-value and showed only the top 25 - since POP alone has 49
+## pathways below FDR<0.05, those already fill all 25 slots and the
+## moderate band (FDR 0.05-0.25) - where biologically important but less
+## extreme hits like Focal adhesion live - never appeared, even though the
+## title said "FDR<0.25". Ranking the two bands SEPARATELY and showing the
+## top 15 of EACH fixes that: the moderate band gets its own guaranteed
+## space in the figure instead of being crowded out by the strongest hits.
+cat("Building the POP KEGG barplot with the strong (FDR<0.05) and moderate\n")
+cat("(FDR 0.05-0.25) bands shown separately, so moderate-but-real hits like\n")
+cat("Focal adhesion are not crowded out by the strongest hits...\n")
+make_fgsea_band_barplot <- function(fgsea_res, title, n_each = 15) {
+  fgsea_res <- fgsea_res[!is.na(fgsea_res$NES), ]
+  strong <- fgsea_res[fgsea_res$padj < 0.05, ]
+  strong <- strong[order(strong$pval), ][seq_len(min(n_each, nrow(strong))), ]
+  moderate <- fgsea_res[fgsea_res$padj >= 0.05 & fgsea_res$padj < 0.25, ]
+  moderate <- moderate[order(moderate$pval), ][seq_len(min(n_each, nrow(moderate))), ]
+  d <- rbind(strong, moderate)
+  d$Band <- ifelse(d$padj < 0.05, "FDR<0.05 (strong)", "FDR 0.05-0.25 (moderate)")
+  d$Band <- factor(d$Band, levels = c("FDR<0.05 (strong)", "FDR 0.05-0.25 (moderate)"))
+  d$Label <- factor(kegg_label(d$pathway), levels = rev(unique(kegg_label(d$pathway))))
+  ggplot(d, aes(x = NES, y = Label, fill = Band)) +
     geom_col() +
-    scale_fill_manual(values = c("FDR<0.05" = "#B2182B", "FDR<0.25" = "#F4A582")) +
+    scale_fill_manual(values = c("FDR<0.05 (strong)" = "#B2182B", "FDR 0.05-0.25 (moderate)" = "#F4A582")) +
     geom_vline(xintercept = 0, color = "grey30") +
-    labs(title = title, x = "Normalized Enrichment Score (NES)", y = NULL, fill = "Significance") +
-    theme_bw() + theme(axis.text.y = element_text(size = 8), plot.title = element_text(size = 12))
+    facet_wrap(~Band, scales = "free_y", ncol = 1) +
+    labs(title = title,
+         subtitle = "Top 15 strong AND top 15 moderate shown separately - see comment in script for why",
+         x = "Normalized Enrichment Score (NES)", y = NULL) +
+    theme_bw() + theme(axis.text.y = element_text(size = 8), legend.position = "none",
+                        strip.text = element_text(size = 10, face = "bold"),
+                        plot.subtitle = element_text(size = 9))
 }
 n_fdr025_pop <- sum(fgsea_pop$padj < 0.25, na.rm = TRUE)
-p_fdr025_pop <- make_fgsea_barplot_fdr025(
-  fgsea_pop, paste0("GSEA via fgsea - KEGG pathways in POP, FDR<0.25 (",
-                     n_fdr025_pop, " total, top 25 by p-value shown)"))
-ggsave("figures/fgsea_KEGG_barplot_POP_FDR025.png", p_fdr025_pop, width = 12, height = 8, dpi = 300)
-cat("Saved: figures/fgsea_KEGG_barplot_POP_FDR025.png (", n_fdr025_pop, "pathways at FDR<0.25 in POP,",
-    "top 25 shown by p-value )\n\n")
+p_fdr025_pop <- make_fgsea_band_barplot(fgsea_pop, paste0("GSEA via fgsea - KEGG pathways in POP (", n_fdr025_pop, " total at FDR<0.25)"))
+ggsave("figures/fgsea_KEGG_barplot_POP_FDR025.png", p_fdr025_pop, width = 12, height = 11, dpi = 300)
+cat("Saved: figures/fgsea_KEGG_barplot_POP_FDR025.png (", n_fdr025_pop,
+    "pathways at FDR<0.25 in POP total, top 15 of each band shown )\n\n")
 
 ## --- 12b: targeted ECM / cell-junction panel (POP + SUI) -----------------
 ## A pre-specified panel of 6 KEGG pathways tied to the connective-tissue/
