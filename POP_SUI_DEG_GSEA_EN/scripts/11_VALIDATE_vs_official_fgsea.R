@@ -764,54 +764,28 @@ fgsea_sui_full_out <- fgsea_sui_full_out[order(fgsea_sui_full_out$pval), ]
 write.csv(fgsea_sui_full_out, "results/SUI_official_fgsea_KEGG_full.csv", row.names = FALSE)
 cat("Saved: results/SUI_official_fgsea_KEGG_full.csv (all", nrow(fgsea_sui_full_out), "pathways)\n\n")
 
-## --- 7c: THE definitive POP vs SUI shared-pathway table (fgsea only) ------
-## This REPLACES the old Part 5 "shared pathways" table for presentation
-## purposes. Part 5's table was built from our hand-rolled GSEA (Part 3-4),
-## which has a real quirk: for a pathway with an extremely one-sided
-## permutation distribution, its NES becomes mathematically undefined (NA)
-## - dividing by a mean of zero values (see the comment above calc_es()
-## near the top of this script). fgsea's own algorithm does not have this
-## limitation - it ALWAYS returns a defined NES - so building this table
-## directly from fgsea_pop/fgsea_sui (computed just above) instead of from
-## gsea_pop/gsea_sui eliminates every NA by construction, not by patching
-## around it afterwards.
-cat("Building the definitive POP vs SUI KEGG comparison table (fgsea only,\n")
-cat("no NA possible)...\n")
-kegg_fgsea_comparison <- merge(
-  data.frame(PATH = fgsea_pop$pathway, PathwayName = kegg_label(fgsea_pop$pathway),
-             NES_POP = fgsea_pop$NES, padj_POP = fgsea_pop$padj),
-  data.frame(PATH = fgsea_sui$pathway, NES_SUI = fgsea_sui$NES, padj_SUI = fgsea_sui$padj),
-  by = "PATH"
-)
-kegg_fgsea_comparison$Same_direction <- sign(kegg_fgsea_comparison$NES_POP) == sign(kegg_fgsea_comparison$NES_SUI)
-kegg_fgsea_comparison$Significant_both_FDR025 <- kegg_fgsea_comparison$padj_POP < 0.25 & kegg_fgsea_comparison$padj_SUI < 0.25
-kegg_fgsea_comparison$Significant_either_FDR025 <- kegg_fgsea_comparison$padj_POP < 0.25 | kegg_fgsea_comparison$padj_SUI < 0.25
-kegg_fgsea_comparison <- kegg_fgsea_comparison[order(pmin(kegg_fgsea_comparison$padj_POP, kegg_fgsea_comparison$padj_SUI)), ]
-write.csv(kegg_fgsea_comparison, "results/KEGG_POP_vs_SUI_fgsea_full_comparison.csv", row.names = FALSE)
-
-n_common <- nrow(kegg_fgsea_comparison)
-n_conc_all <- sum(kegg_fgsea_comparison$Same_direction)
-n_sig_both <- sum(kegg_fgsea_comparison$Significant_both_FDR025)
-either_sig <- subset(kegg_fgsea_comparison, Significant_either_FDR025)
-n_conc_either <- sum(either_sig$Same_direction)
-
-cat("Saved: results/KEGG_POP_vs_SUI_fgsea_full_comparison.csv (", n_common,
-    "pathways tested in both POP and SUI, ZERO NA in Same_direction)\n\n")
-cat("--- Summary (fgsea only) ---\n")
-cat("Direction-concordant across ALL", n_common, "comparable pathways:", n_conc_all,
-    "(", round(100 * n_conc_all / n_common, 1), "% )\n")
-cat("Significant (FDR<0.25) in BOTH POP and SUI:", n_sig_both, "\n")
-cat("Among the", nrow(either_sig), "pathways significant in AT LEAST ONE disease,",
-    n_conc_either, "are direction-concordant (", round(100 * n_conc_either / nrow(either_sig), 1), "% )\n\n")
-cat("NOTE ON THE 'ONLY 6' NUMBER: requiring FDR<0.25 in BOTH datasets\n")
-cat("independently is a strict bar. fgsea's own significance calls are more\n")
-cat("conservative than the hand-rolled method's (POP: 90 vs the old 117;\n")
-cat("SUI: 20 vs the old 50) - fgsea uses a more precise tail-probability\n")
-cat("estimator, while the hand-rolled method's simple permutation counting\n")
-cat("tends to call more pathways significant than are truly defensible.\n")
-cat("The DIRECTION-CONCORDANCE numbers above (not restricted to the strict\n")
-cat("'significant in both' bar) are the more informative number for judging\n")
-cat("whether POP and SUI point the same way biologically.\n\n")
+## --- 7c: fix the NA in the Part 5 shared-pathways table, nothing else ----
+## Keeps the EXACT same list of pathways as shared_025 (Part 5) - same
+## rows, same criterion for "shared" (hand-rolled p.adjust<0.25 in each
+## disease) - and ONLY replaces the NES/direction columns with fgsea's
+## values, which are always defined (fgsea has no equivalent to the
+## hand-rolled method's "NES undefined when the permutation distribution
+## is entirely one-sided" quirk - see the comment above calc_es() near
+## the top of this script). This is a targeted fix, not a redesign: same
+## table shape you already had, just the NA cells filled in correctly.
+cat("Fixing the NA cells in the Part 5 shared-pathways table using fgsea's\n")
+cat("NES (same list of pathways, same 'shared' criterion as Part 5 - only\n")
+cat("the NES/direction values change)...\n")
+shared_025_fixed <- shared_025[, c("PATH", "PathwayName", "Nh_POP", "p.adjust_POP", "Nh_SUI", "p.adjust_SUI")]
+shared_025_fixed$NES_POP <- fgsea_pop$NES[match(shared_025_fixed$PATH, fgsea_pop$pathway)]
+shared_025_fixed$NES_SUI <- fgsea_sui$NES[match(shared_025_fixed$PATH, fgsea_sui$pathway)]
+shared_025_fixed$Same_direction <- sign(shared_025_fixed$NES_POP) == sign(shared_025_fixed$NES_SUI)
+shared_025_fixed <- shared_025_fixed[, c("PATH", "PathwayName", "Nh_POP", "NES_POP", "p.adjust_POP",
+                                          "Nh_SUI", "NES_SUI", "p.adjust_SUI", "Same_direction")]
+write.csv(shared_025_fixed, "results/shared_pathways_FDR025_NA_fixed.csv", row.names = FALSE)
+cat("Saved: results/shared_pathways_FDR025_NA_fixed.csv (", nrow(shared_025_fixed),
+    "pathways, same list as Part 5, 0 NA in Same_direction -", sum(shared_025_fixed$Same_direction),
+    "concordant,", sum(!shared_025_fixed$Same_direction), "discordant )\n\n")
 
 ## --- 7d: compare side by side - our hand-rolled GSEA vs official fgsea ----
 ## Because both methods were given the exact same gene sets (keyed by the
