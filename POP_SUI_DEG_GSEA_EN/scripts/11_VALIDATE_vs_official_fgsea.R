@@ -861,6 +861,34 @@ cat("Saved: results/KEGG_significant_in_BOTH_diseases_fgsea.csv (", nrow(kegg_bo
 cat("does fgsea call significant in both diseases', out of", nrow(kegg_common), "pathways tested in both -",
     sum(kegg_both_significant$Same_direction), "of", nrow(kegg_both_significant), "are direction-concordant )\n\n")
 
+## --- 7e: THE full table, every one of the ~198 pathways tested in BOTH
+## diseases (not filtered to significant only) - so borderline/near-miss
+## pathways stay visible. This is what small samples (SUI n=3 vs 3) call
+## for: a pathway just above the FDR<0.25 line today could easily fall
+## below it with a couple more samples, and a reader should be able to see
+## that instead of only ever seeing the pathways that already "won". Every
+## row is flagged with direction concordance and per-disease/both
+## significance, sorted by whichever disease's own padj is smaller, so the
+## strongest and closest-to-significant pathways float to the top together.
+cat("Building the FULL table of all", nrow(kegg_common), "pathways tested in\n")
+cat("both POP and SUI (not filtered to significant only), flagged with\n")
+cat("direction and significance columns, so near-significant pathways -\n")
+cat("relevant given the small SUI sample size (n=3 vs 3) - stay visible...\n")
+kegg_common_full <- kegg_common
+kegg_common_full$Same_direction <- sign(kegg_common_full$NES_POP) == sign(kegg_common_full$NES_SUI)
+kegg_common_full$Significant_POP_FDR025 <- kegg_common_full$padj_POP < 0.25
+kegg_common_full$Significant_SUI_FDR025 <- kegg_common_full$padj_SUI < 0.25
+kegg_common_full$Significant_both_FDR025 <- kegg_common_full$Significant_POP_FDR025 & kegg_common_full$Significant_SUI_FDR025
+kegg_common_full <- kegg_common_full[order(pmin(kegg_common_full$padj_POP, kegg_common_full$padj_SUI)), ]
+write.csv(kegg_common_full, "results/KEGG_all_common_pathways_fgsea.csv", row.names = FALSE)
+cat("Saved: results/KEGG_all_common_pathways_fgsea.csv (", nrow(kegg_common_full),
+    "pathways total -\n")
+cat(" ", sum(kegg_common_full$Same_direction), "same-direction,",
+    sum(!kegg_common_full$Same_direction), "opposite-direction;\n")
+cat(" ", sum(kegg_common_full$Significant_POP_FDR025), "significant in POP,",
+    sum(kegg_common_full$Significant_SUI_FDR025), "significant in SUI,",
+    sum(kegg_common_full$Significant_both_FDR025), "significant in BOTH )\n\n")
+
 ## --- 7e: compare side by side - our hand-rolled GSEA vs official fgsea ----
 ## Because both methods were given the exact same gene sets (keyed by the
 ## numeric KEGG PATH id, e.g. "04510" - no name-matching or ID-mapping
