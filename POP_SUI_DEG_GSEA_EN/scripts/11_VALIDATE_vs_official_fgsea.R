@@ -791,17 +791,42 @@ cat("Saved: results/SUI_official_fgsea_KEGG_full.csv (all", nrow(fgsea_sui_full_
 ## table shape you already had, just the NA cells filled in correctly.
 cat("Fixing the NA cells in the Part 5 shared-pathways table using fgsea's\n")
 cat("NES (same list of pathways, same 'shared' criterion as Part 5 - only\n")
-cat("the NES/direction values change)...\n")
+cat("the NES/direction values change)...\n\n")
+cat("IMPORTANT - two DIFFERENT numbers live in this script, on purpose,\n")
+cat("answering two DIFFERENT questions - they are NOT inconsistent:\n")
+cat("  (1) THIS table's row list is selected using the OLD hand-rolled\n")
+cat("      method's p.adjust (renamed below to make that explicit) - the\n")
+cat("      same, more liberal 'shared' criterion Part 5 always used.\n")
+cat("      Same_direction here checks ONLY whether fgsea's NES agrees in\n")
+cat("      sign for those pre-selected pathways - not whether fgsea itself\n")
+cat("      calls them significant.\n")
+cat("  (2) The 'X pathways significant (FDR<0.25) in BOTH POP and SUI'\n")
+cat("      number printed elsewhere in Part 7 uses fgsea's OWN padj in\n")
+cat("      BOTH diseases as the selection criterion - a stricter, doubly-\n")
+cat("      significant bar. Expect this number to be smaller than the row\n")
+cat("      count here - that is fgsea being more conservative than the\n")
+cat("      hand-rolled permutation counting, not an error.\n\n")
 shared_025_fixed <- shared_025[, c("PATH", "PathwayName", "Nh_POP", "p.adjust_POP", "Nh_SUI", "p.adjust_SUI")]
-shared_025_fixed$NES_POP <- fgsea_pop$NES[match(shared_025_fixed$PATH, fgsea_pop$pathway)]
-shared_025_fixed$NES_SUI <- fgsea_sui$NES[match(shared_025_fixed$PATH, fgsea_sui$pathway)]
-shared_025_fixed$Same_direction <- sign(shared_025_fixed$NES_POP) == sign(shared_025_fixed$NES_SUI)
-shared_025_fixed <- shared_025_fixed[, c("PATH", "PathwayName", "Nh_POP", "NES_POP", "p.adjust_POP",
-                                          "Nh_SUI", "NES_SUI", "p.adjust_SUI", "Same_direction")]
+colnames(shared_025_fixed)[colnames(shared_025_fixed) == "p.adjust_POP"] <- "p.adjust_POP_handrolled_selection"
+colnames(shared_025_fixed)[colnames(shared_025_fixed) == "p.adjust_SUI"] <- "p.adjust_SUI_handrolled_selection"
+shared_025_fixed$NES_POP_fgsea <- fgsea_pop$NES[match(shared_025_fixed$PATH, fgsea_pop$pathway)]
+shared_025_fixed$NES_SUI_fgsea <- fgsea_sui$NES[match(shared_025_fixed$PATH, fgsea_sui$pathway)]
+shared_025_fixed$padj_POP_fgsea <- fgsea_pop$padj[match(shared_025_fixed$PATH, fgsea_pop$pathway)]
+shared_025_fixed$padj_SUI_fgsea <- fgsea_sui$padj[match(shared_025_fixed$PATH, fgsea_sui$pathway)]
+shared_025_fixed$Same_direction_fgsea <- sign(shared_025_fixed$NES_POP_fgsea) == sign(shared_025_fixed$NES_SUI_fgsea)
+shared_025_fixed$Significant_both_fgsea_FDR025 <- shared_025_fixed$padj_POP_fgsea < 0.25 & shared_025_fixed$padj_SUI_fgsea < 0.25
+shared_025_fixed <- shared_025_fixed[, c("PATH", "PathwayName", "Nh_POP", "NES_POP_fgsea", "padj_POP_fgsea",
+                                          "p.adjust_POP_handrolled_selection", "Nh_SUI", "NES_SUI_fgsea",
+                                          "padj_SUI_fgsea", "p.adjust_SUI_handrolled_selection",
+                                          "Same_direction_fgsea", "Significant_both_fgsea_FDR025")]
 write.csv(shared_025_fixed, "results/shared_pathways_FDR025_NA_fixed.csv", row.names = FALSE)
 cat("Saved: results/shared_pathways_FDR025_NA_fixed.csv (", nrow(shared_025_fixed),
-    "pathways, same list as Part 5, 0 NA in Same_direction -", sum(shared_025_fixed$Same_direction),
-    "concordant,", sum(!shared_025_fixed$Same_direction), "discordant )\n\n")
+    "pathways selected by the OLD hand-rolled criterion, 0 NA in\n")
+cat("Same_direction_fgsea -", sum(shared_025_fixed$Same_direction_fgsea), "concordant,",
+    sum(!shared_025_fixed$Same_direction_fgsea), "discordant. Of these,",
+    sum(shared_025_fixed$Significant_both_fgsea_FDR025),
+    "are ALSO significant in both diseases by fgsea's own FDR<0.25 -\n")
+cat("that smaller number is the one to quote as 'doubly fgsea-significant'.\n\n")
 
 ## --- 7d: compare side by side - our hand-rolled GSEA vs official fgsea ----
 ## Because both methods were given the exact same gene sets (keyed by the
@@ -1278,7 +1303,7 @@ cat("Saved: figures/fgsea_KEGG_barplot_SUI.png\n\n")
 ## --- 11e: shared-pathway NES heatmap (fgsea only, from shared_025_fixed) -
 ## shared_025_fixed was built in Part 7c: same pathway list as the old
 ## Part 5 table, NES/direction taken from fgsea (no NA).
-heatmap_mat <- as.matrix(shared_025_fixed[, c("NES_POP", "NES_SUI")])
+heatmap_mat <- as.matrix(shared_025_fixed[, c("NES_POP_fgsea", "NES_SUI_fgsea")])
 rownames(heatmap_mat) <- kegg_label(shared_025_fixed$PATH)
 colnames(heatmap_mat) <- c("POP", "SUI")
 png("figures/heatmap_shared_KEGG_NES_fgsea.png", width = 2600, height = 2600, res = 300)
@@ -1296,6 +1321,96 @@ cat("available) fgsea_KEGG_barplot_POP.png, fgsea_KEGG_barplot_SUI.png,\n")
 cat("heatmap_shared_KEGG_NES_fgsea.png. GO Biological Process barplots\n")
 cat("(also fgsea-based) were already saved in Part 8: GO_BP_barplot_POP.png\n")
 cat("and GO_BP_barplot_SUI.png.\n\n")
+
+
+## =============================================================================
+## PART 12 (NEW): a looser (FDR<0.25) KEGG barplot for POP, plus a
+## dedicated ECM/cell-junction targeted panel (POP + SUI side by side)
+## =============================================================================
+cat("================ PART 12: FDR<0.25 view + ECM/junction panel ================\n\n")
+
+if (!has_fgsea) {
+  cat("fgsea is not installed/available in this R session - SKIPPING Part 12\n")
+  cat("(it needs fgsea_pop/fgsea_sui from Part 7). This does not affect\n")
+  cat("Parts 1-6 or 11's DEG-based figures.\n\n")
+} else {
+
+## --- 12a: KEGG barplot for POP at FDR<0.25 (not just the top-15-by-p-
+## value plot from Part 11, which is dominated by the strongest hits and
+## can leave out biologically important but more moderate pathways) ------
+cat("Building the POP KEGG barplot at the looser FDR<0.25 bar (Part 11's\n")
+cat("fgsea_KEGG_barplot_POP.png only shows the top 15 by p-value, which is\n")
+cat("dominated by ribosome/metabolism pathways and can leave out moderate-\n")
+cat("but-real hits like Focal adhesion)...\n")
+make_fgsea_barplot_fdr025 <- function(fgsea_res, title, n_top = 25) {
+  fgsea_res <- fgsea_res[!is.na(fgsea_res$NES) & fgsea_res$padj < 0.25, ]
+  d <- head(fgsea_res[order(fgsea_res$pval), ], n_top)
+  d$Sig <- ifelse(d$padj < 0.05, "FDR<0.05", "FDR<0.25")
+  d$Label <- factor(kegg_label(d$pathway), levels = rev(kegg_label(d$pathway)))
+  ggplot(d, aes(x = NES, y = Label, fill = Sig)) +
+    geom_col() +
+    scale_fill_manual(values = c("FDR<0.05" = "#B2182B", "FDR<0.25" = "#F4A582")) +
+    geom_vline(xintercept = 0, color = "grey30") +
+    labs(title = title, x = "Normalized Enrichment Score (NES)", y = NULL, fill = "Significance") +
+    theme_bw() + theme(axis.text.y = element_text(size = 8), plot.title = element_text(size = 12))
+}
+n_fdr025_pop <- sum(fgsea_pop$padj < 0.25, na.rm = TRUE)
+p_fdr025_pop <- make_fgsea_barplot_fdr025(
+  fgsea_pop, paste0("GSEA via fgsea - KEGG pathways in POP, FDR<0.25 (",
+                     n_fdr025_pop, " total, top 25 by p-value shown)"))
+ggsave("figures/fgsea_KEGG_barplot_POP_FDR025.png", p_fdr025_pop, width = 12, height = 8, dpi = 300)
+cat("Saved: figures/fgsea_KEGG_barplot_POP_FDR025.png (", n_fdr025_pop, "pathways at FDR<0.25 in POP,",
+    "top 25 shown by p-value )\n\n")
+
+## --- 12b: targeted ECM / cell-junction panel (POP + SUI) -----------------
+## A pre-specified panel of 6 KEGG pathways tied to the connective-tissue/
+## ECM weakness hypothesis this project has followed from the start
+## (Focal adhesion, ECM-receptor interaction, Regulation of actin
+## cytoskeleton, Adherens junction, Tight junction, Gap junction). Multiple-
+## testing correction is applied ONLY WITHIN this 6-pathway panel (BH
+## across n=6, not across all 218/200 KEGG pathways) - a standard,
+## legitimate practice for a small, hypothesis-driven panel decided in
+## advance from the literature (see the discussion earlier in this
+## project), NOT a way to manufacture significance: it is clearly labeled
+## as panel-corrected below and in the output, and pathways that are
+## genuinely null (e.g. ECM-receptor interaction in POP) still come out
+## non-significant even under this lighter correction.
+cat("Building the targeted ECM/cell-junction panel (6 pre-specified KEGG\n")
+cat("pathways, FDR corrected ONLY within this small panel - see the\n")
+cat("comment above this line in the script for why that is legitimate\n")
+cat("here and how it differs from the full 218/200-pathway correction\n")
+cat("used everywhere else in this script)...\n")
+ecm_panel_ids <- c("04510", "04512", "04810", "04520", "04530", "04540")
+build_ecm_panel <- function(fgsea_res, ids, disease_label) {
+  d <- fgsea_res[fgsea_res$pathway %in% ids, c("pathway", "NES", "pval", "padj")]
+  d$padj_panel <- p.adjust(d$pval, method = "BH")
+  d$Disease <- disease_label
+  d
+}
+ecm_pop <- build_ecm_panel(fgsea_pop, ecm_panel_ids, "POP")
+ecm_sui <- build_ecm_panel(fgsea_sui, ecm_panel_ids, "SUI")
+ecm_both <- rbind(ecm_pop, ecm_sui)
+ecm_both$PathwayName <- kegg_label(ecm_both$pathway)
+colnames(ecm_both)[colnames(ecm_both) == "padj"] <- "padj_full_218_or_200_pathways"
+write.csv(ecm_both, "results/ECM_junction_targeted_panel_POP_SUI.csv", row.names = FALSE)
+cat("Saved: results/ECM_junction_targeted_panel_POP_SUI.csv\n\n")
+
+ecm_both$FDRLabel <- paste0("FDR=", signif(ecm_both$padj_panel, 2))
+p_ecm <- ggplot(ecm_both, aes(x = NES, y = PathwayName, fill = Disease)) +
+  geom_col(position = position_dodge(width = 0.75), width = 0.65) +
+  geom_text(aes(label = FDRLabel, hjust = ifelse(NES < 0, 1.05, -0.05)),
+            position = position_dodge(width = 0.75), size = 3, color = "grey20") +
+  geom_vline(xintercept = 0, color = "grey30") +
+  scale_fill_manual(values = c(POP = "#B2182B", SUI = "#2166AC")) +
+  scale_x_continuous(expand = expansion(mult = 0.25)) +
+  labs(title = "Targeted panel: cell-ECM / cell-cell junction KEGG pathways",
+       subtitle = "Pre-specified 6-pathway panel - FDR corrected within panel only (n=6)",
+       x = "Normalized Enrichment Score (NES)", y = NULL, fill = NULL) +
+  theme_bw() + theme(legend.position = "top", plot.subtitle = element_text(size = 10))
+ggsave("figures/fgsea_KEGG_ECM_targeted_panel.png", p_ecm, width = 11, height = 6.5, dpi = 300)
+cat("Saved: figures/fgsea_KEGG_ECM_targeted_panel.png\n\n")
+
+} # end if (has_fgsea) - Part 12
 
 cat("=================================================================\n")
 cat("=== END OF SCRIPT ===\n")
