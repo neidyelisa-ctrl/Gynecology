@@ -25,10 +25,14 @@
 # how many pathways agree in direction, and the correlation between the
 # NES values from each method. Part 7 ALSO saves the FULL official fgsea
 # table (every pathway, with fgsea's own NES) to
-# results/POP_official_fgsea_KEGG_full.csv and _SUI_..., which is the file
-# to check for a pathway's real direction when our own hand-rolled NES
-# came out NA in Part 3/4 (this happens for a handful of the MOST
-# significant pathways - see the README for why).
+# results/POP_official_fgsea_KEGG_full.csv and _SUI_..., useful as an
+# independent cross-check. Parts 3-4's own NES no longer comes out NA:
+# on the rare pathway where literally every permutation lands on the
+# opposite side of zero from the real result (too strong a signal for the
+# usual same-side normalization to be defined), a documented fallback
+# normalization is used instead and flagged TRUE in the NES_fallback
+# column - see the comment right above that code in Part 3 for the exact
+# mechanism.
 #
 # PART 8 (also new) runs GO Biological Process enrichment - thousands of
 # more specific terms than KEGG's 218 pathways, including some (e.g.
@@ -401,10 +405,18 @@ hit_idx_pop <- hit_idx_pop[sapply(hit_idx_pop, length) >= 3]
 cat("Pathways with at least 3 genes in the ranked list:", length(hit_idx_pop), "\n")
 es_obs_pop <- sapply(hit_idx_pop, calc_es, scores_abs = abs(ranked_scores_pop), N = N_pop)
 
-# The permutation: shuffle the Control/POP labels 500 times, recompute the
+# The permutation: shuffle the Control/POP labels 2000 times, recompute the
 # ES for each shuffle, and compare the real ES against that "random"
-# distribution - this is what produces each pathway's p-value.
-n_perm <- 500
+# distribution - this is what produces each pathway's p-value. 2000 (up
+# from an earlier 500) gives a finer-grained null distribution: it lowers
+# the smallest possible p-value from 1/501 to 1/2001, which both resolves
+# more of the p.adjust ties at the old floor AND makes it far less likely
+# that literally every permutation lands on the opposite side of zero from
+# the real result (the root cause of the NES-undefined cases below - see
+# the fallback normalization a few lines down for what happens on the
+# rare pathway where that still occurs). The permutation space here
+# (choose(24,12) = 2,704,156 possible relabelings) comfortably supports it.
+n_perm <- 2000
 cat("Running", n_perm, "permutations (shuffles) of the Control/POP label...\n")
 cat("(this is the slowest part of the script - it can take a few minutes)\n")
 t0 <- Sys.time()
@@ -424,22 +436,42 @@ for (i in seq_len(n_perm)) {
 }
 cat("Done in", round(difftime(Sys.time(), t0, units = "secs"), 1), "seconds\n\n")
 
+# NES = observed ES / mean(permutation ES on the SAME side of zero) - the
+# standard Subramanian et al. 2005 normalization. On rare pathways where
+# the real enrichment is so strong that NOT ONE of the n_perm reshuffles
+# landed on the same side as the real result, that same-side pool is
+# empty and the ratio is undefined (0/empty -> NaN). Rather than leaving
+# NES as NA there (which is what happened before), we fall back to
+# normalizing by the full null distribution instead (both signs pooled,
+# |pe| across all of it) - a standard, documented fallback for exactly
+# this one-sided-null edge case, and we flag every pathway where it was
+# used (NES_fallback_pop) so nothing is silently substituted.
 pval_pop <- numeric(length(hit_idx_pop)); nes_pop <- numeric(length(hit_idx_pop))
+nes_fallback_pop <- logical(length(hit_idx_pop))
 for (j in seq_along(hit_idx_pop)) {
   pe <- perm_es_pop[, j]; pe <- pe[!is.na(pe)]
   if (es_obs_pop[j] >= 0) {
     pval_pop[j] <- (sum(pe >= es_obs_pop[j]) + 1) / (length(pe) + 1)
-    base <- mean(pe[pe >= 0]); if (is.nan(base) || base == 0) base <- NA
+    base <- mean(pe[pe >= 0])
   } else {
     pval_pop[j] <- (sum(pe <= es_obs_pop[j]) + 1) / (length(pe) + 1)
-    base <- mean(abs(pe[pe < 0])); if (is.nan(base) || base == 0) base <- NA
+    base <- mean(abs(pe[pe < 0]))
   }
-  nes_pop[j] <- es_obs_pop[j] / base
+  if (is.nan(base) || base == 0) {
+    base <- mean(abs(pe))
+    nes_fallback_pop[j] <- TRUE
+  }
+  nes_pop[j] <- if (is.nan(base) || base == 0) NA else es_obs_pop[j] / base
 }
+cat("NES fallback normalization used for", sum(nes_fallback_pop),
+    "of", length(nes_fallback_pop), "pathways (real signal stronger than\n")
+cat("all", n_perm, "reshuffles on the same side) - these are flagged TRUE in\n")
+cat("the NES_fallback_pop column below, not hidden.\n\n")
 
 leading_edge_pop <- sapply(hit_idx_pop, function(idx) paste(ranked_genes_pop[idx], collapse = "/"))
 gsea_pop <- data.frame(PATH = names(hit_idx_pop), Nh = sapply(hit_idx_pop, length),
-                        ES = es_obs_pop, NES = nes_pop, pvalue = pval_pop, leadingEdge = leading_edge_pop)
+                        ES = es_obs_pop, NES = nes_pop, NES_fallback = nes_fallback_pop,
+                        pvalue = pval_pop, leadingEdge = leading_edge_pop)
 gsea_pop$p.adjust <- p.adjust(gsea_pop$pvalue, "BH")
 gsea_pop$PathwayName <- kegg_label(gsea_pop$PATH)
 gsea_pop <- gsea_pop[order(gsea_pop$pvalue), ]
@@ -548,7 +580,12 @@ hit_idx_sui <- lapply(gene_sets_sui, function(g) which(ranked_genes_sui %in% g))
 hit_idx_sui <- hit_idx_sui[sapply(hit_idx_sui, length) >= 3]
 es_obs_sui <- sapply(hit_idx_sui, calc_es, scores_abs = abs(ranked_scores_sui), N = N_sui)
 
-n_perm2 <- 1000
+# Same reasoning as n_perm above: 2000 (up from 1000) gives finer p-value
+# resolution and makes the one-sided-null edge case (see the fallback
+# normalization below) rarer. This is gene-label permutation (random gene
+# sets of the same size drawn from all ~20k+ ranked genes), so the
+# permutation space is effectively unlimited - no ceiling concern here.
+n_perm2 <- 2000
 cat("Running", n_perm2, "permutations (pathway shuffling) for SUI...\n")
 t0 <- Sys.time()
 scores_abs_sui <- abs(ranked_scores_sui)
@@ -561,22 +598,32 @@ for (i in seq_len(n_perm2)) {
 }
 cat("Done in", round(difftime(Sys.time(), t0, units = "secs"), 1), "seconds\n\n")
 
+# Same NES normalization + fallback logic as POP above - see the comment
+# there for why the fallback exists and what it does.
 pval_sui <- numeric(length(hit_idx_sui)); nes_sui <- numeric(length(hit_idx_sui))
+nes_fallback_sui <- logical(length(hit_idx_sui))
 for (j in seq_along(hit_idx_sui)) {
   pe <- perm_es_sui[, j]; pe <- pe[!is.na(pe)]
   if (es_obs_sui[j] >= 0) {
     pval_sui[j] <- (sum(pe >= es_obs_sui[j]) + 1) / (length(pe) + 1)
-    base <- mean(pe[pe >= 0]); if (is.nan(base) || base == 0) base <- NA
+    base <- mean(pe[pe >= 0])
   } else {
     pval_sui[j] <- (sum(pe <= es_obs_sui[j]) + 1) / (length(pe) + 1)
-    base <- mean(abs(pe[pe < 0])); if (is.nan(base) || base == 0) base <- NA
+    base <- mean(abs(pe[pe < 0]))
   }
-  nes_sui[j] <- es_obs_sui[j] / base
+  if (is.nan(base) || base == 0) {
+    base <- mean(abs(pe))
+    nes_fallback_sui[j] <- TRUE
+  }
+  nes_sui[j] <- if (is.nan(base) || base == 0) NA else es_obs_sui[j] / base
 }
+cat("NES fallback normalization used for", sum(nes_fallback_sui),
+    "of", length(nes_fallback_sui), "pathways - flagged TRUE in NES_fallback_sui.\n\n")
 
 leading_edge_sui <- sapply(hit_idx_sui, function(idx) paste(ranked_genes_sui[idx], collapse = "/"))
 gsea_sui <- data.frame(PATH = names(hit_idx_sui), Nh = sapply(hit_idx_sui, length),
-                        ES = es_obs_sui, NES = nes_sui, pvalue = pval_sui, leadingEdge = leading_edge_sui)
+                        ES = es_obs_sui, NES = nes_sui, NES_fallback = nes_fallback_sui,
+                        pvalue = pval_sui, leadingEdge = leading_edge_sui)
 gsea_sui$p.adjust <- p.adjust(gsea_sui$pvalue, "BH")
 gsea_sui$PathwayName <- kegg_label(gsea_sui$PATH)
 gsea_sui <- gsea_sui[order(gsea_sui$pvalue), ]
@@ -599,15 +646,16 @@ report_shared <- function(fdr_cut) {
   cat("--- FDR <", fdr_cut, ": POP significant =", nrow(pop_sig),
       "| SUI significant =", nrow(sui_sig), "| SHARED =", length(shared_ids), "---\n")
   if (length(shared_ids) == 0) return(data.frame())
-  out <- merge(pop_sig[pop_sig$PATH %in% shared_ids, c("PATH","PathwayName","Nh","NES","p.adjust")],
-               sui_sig[sui_sig$PATH %in% shared_ids, c("PATH","Nh","NES","p.adjust")],
+  out <- merge(pop_sig[pop_sig$PATH %in% shared_ids, c("PATH","PathwayName","Nh","NES","NES_fallback","p.adjust")],
+               sui_sig[sui_sig$PATH %in% shared_ids, c("PATH","Nh","NES","NES_fallback","p.adjust")],
                by = "PATH", suffixes = c("_POP", "_SUI"))
   out$Same_direction <- sign(out$NES_POP) == sign(out$NES_SUI)
   out <- out[order(out$p.adjust_POP), ]
   n_na <- sum(is.na(out$Same_direction))
   cat("Same direction in both diseases:", sum(out$Same_direction, na.rm = TRUE), "of",
       sum(!is.na(out$Same_direction)), "pathways with a comparable NES")
-  if (n_na > 0) cat(" (", n_na, "excluded - NES undefined on at least one side)")
+  if (n_na > 0) cat(" (", n_na, "genuinely could not be computed - see NES_fallback_POP/SUI\n")
+  if (n_na > 0) cat("for which used the fallback normalization instead of being NA)")
   cat("\n\n")
   out
 }
@@ -747,19 +795,17 @@ cat("Official fgsea (POP):", nrow(fgsea_pop), "pathways tested,",
     sum(fgsea_pop$padj < 0.25, na.rm = TRUE), "significant at FDR<0.25\n\n")
 
 ## Save the FULL official fgsea table - EVERY pathway it tested, with ITS
-## OWN NES (always a real number - fgsea does not have the "NES undefined"
-## issue our hand-rolled GSEA can hit for very strongly one-sided pathways,
-## see Part 3's gsea_pop / results/POP_GSEA_classic_KEGG.csv, where a
-## pathway can have a p-value but NA in the NES column). This is the file
-## to check for the OFFICIAL direction of a pathway when our own NES is NA.
+## OWN NES - as an independent cross-check against our hand-rolled NES
+## (Part 3's gsea_pop / results/POP_GSEA_classic_KEGG.csv), useful even
+## now that the hand-rolled NES no longer comes out NA (see the fallback
+## normalization in Part 3).
 fgsea_pop_full_out <- fgsea_pop
 fgsea_pop_full_out$leadingEdge <- sapply(fgsea_pop_full_out$leadingEdge, paste, collapse = "/")
 fgsea_pop_full_out$PathwayName <- kegg_label(fgsea_pop_full_out$pathway)
 fgsea_pop_full_out <- fgsea_pop_full_out[order(fgsea_pop_full_out$pval), ]
 write.csv(fgsea_pop_full_out, "results/POP_official_fgsea_KEGG_full.csv", row.names = FALSE)
 cat("Saved: results/POP_official_fgsea_KEGG_full.csv (all", nrow(fgsea_pop_full_out),
-    "pathways, with fgsea's own NES for every one - including pathways where\n")
-cat("our hand-rolled NES was NA)\n\n")
+    "pathways, with fgsea's own independent NES for every one)\n\n")
 
 ## --- 7b: run official fgsea on the SAME ranked SUI gene list, using the
 ## SAME gene_sets_sui object built from org.Hs.eg.db in Part 4 -------------
@@ -780,18 +826,16 @@ fgsea_sui_full_out <- fgsea_sui_full_out[order(fgsea_sui_full_out$pval), ]
 write.csv(fgsea_sui_full_out, "results/SUI_official_fgsea_KEGG_full.csv", row.names = FALSE)
 cat("Saved: results/SUI_official_fgsea_KEGG_full.csv (all", nrow(fgsea_sui_full_out), "pathways)\n\n")
 
-## --- 7c: fix the NA in the Part 5 shared-pathways table, nothing else ----
+## --- 7c: cross-check the Part 5 shared-pathways table against fgsea -----
 ## Keeps the EXACT same list of pathways as shared_025 (Part 5) - same
 ## rows, same criterion for "shared" (hand-rolled p.adjust<0.25 in each
-## disease) - and ONLY replaces the NES/direction columns with fgsea's
-## values, which are always defined (fgsea has no equivalent to the
-## hand-rolled method's "NES undefined when the permutation distribution
-## is entirely one-sided" quirk - see the comment above calc_es() near
-## the top of this script). This is a targeted fix, not a redesign: same
-## table shape you already had, just the NA cells filled in correctly.
-cat("Fixing the NA cells in the Part 5 shared-pathways table using fgsea's\n")
-cat("NES (same list of pathways, same 'shared' criterion as Part 5 - only\n")
-cat("the NES/direction values change)...\n\n")
+## disease) - and ADDS fgsea's own NES/direction/significance columns as
+## an independent second opinion alongside the hand-rolled ones (which no
+## longer come out NA either - see the fallback normalization added to
+## Part 3/4's NES calculation).
+cat("Adding fgsea's own NES to the Part 5 shared-pathways table, as an\n")
+cat("independent cross-check alongside the hand-rolled NES (same list of\n")
+cat("pathways, same 'shared' criterion as Part 5)...\n\n")
 cat("IMPORTANT - two DIFFERENT numbers live in this script, on purpose,\n")
 cat("answering two DIFFERENT questions - they are NOT inconsistent:\n")
 cat("  (1) THIS table's row list is selected using the OLD hand-rolled\n")
