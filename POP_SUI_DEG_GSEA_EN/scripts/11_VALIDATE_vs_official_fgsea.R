@@ -409,19 +409,33 @@ es_obs_pop <- sapply(hit_idx_pop, calc_es, scores_abs = abs(ranked_scores_pop), 
 # ES for each shuffle, and compare the real ES against that "random"
 # distribution - this is what produces each pathway's p-value. 2000 (up
 # from an earlier 500) gives a finer-grained null distribution: it lowers
-# the smallest possible p-value from 1/501 to 1/2001, which both resolves
-# more of the p.adjust ties at the old floor AND makes it far less likely
-# that literally every permutation lands on the opposite side of zero from
-# the real result (the root cause of the NES-undefined cases below - see
-# the fallback normalization a few lines down for what happens on the
-# rare pathway where that still occurs). The permutation space here
-# (choose(24,12) = 2,704,156 possible relabelings) comfortably supports it.
-n_perm <- 2000
+# the smallest possible p-value, which both resolves more of the p.adjust
+# ties at the old floor AND makes it less likely that literally every
+# permutation lands on the opposite side of zero from the real result (the
+# root cause of the NES-undefined cases below - see the fallback
+# normalization a few lines down, which by itself already guarantees no NA
+# regardless of n_perm - this increase is only for extra resolution, not
+# required for correctness). The permutation space here (choose(24,12) =
+# 2,704,156 possible relabelings) comfortably supports 1000.
+#
+# NOTE ON RUNTIME: each permutation refits the full linear model (eBayes +
+# lmFit over ~22k genes) AND recomputes the enrichment score for all 218
+# pathways - on a modest machine this has been observed to take well over
+# an hour at n_perm=2000 (far more than "a few minutes"). 1000 keeps
+# meaningfully better resolution than the original 500 while keeping
+# runtime bounded - if it is still too slow on your machine, lowering this
+# further to 500 is safe: the fallback normalization above makes the NES
+# fix independent of n_perm, so a lower value only costs p-value
+# resolution, not correctness.
+n_perm <- 1000
 cat("Running", n_perm, "permutations (shuffles) of the Control/POP label...\n")
-cat("(this is the slowest part of the script - it can take a few minutes)\n")
+cat("(this is the slowest part of the script - can take 15-60+ minutes\n")
+cat("depending on your machine; progress prints every 10% below so you can\n")
+cat("tell it is working rather than frozen)\n")
 t0 <- Sys.time()
 gene_sets_syms_pop <- lapply(hit_idx_pop, function(idx) ranked_genes_pop[idx])
 perm_es_pop <- matrix(NA_real_, nrow = n_perm, ncol = length(hit_idx_pop))
+progress_step <- max(1, round(n_perm / 10))
 for (i in seq_len(n_perm)) {
   perm_group <- sample(group_full)
   perm_design <- model.matrix(~perm_group)
@@ -433,8 +447,15 @@ for (i in seq_len(n_perm)) {
     hidx <- rank_of_gene[gene_sets_syms_pop[[j]]]
     if (length(hidx) >= 3) perm_es_pop[i, j] <- calc_es(hidx, scores_abs_sorted, N_pop)
   }
+  if (i %% progress_step == 0 || i == n_perm) {
+    elapsed <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
+    eta <- elapsed / i * (n_perm - i)
+    cat("  ", i, "/", n_perm, "permutations done (", round(elapsed / 60, 1),
+        "min elapsed, ~", round(eta / 60, 1), "min remaining )\n")
+    flush(stdout())  # force this line to appear now, not buffered until the end
+  }
 }
-cat("Done in", round(difftime(Sys.time(), t0, units = "secs"), 1), "seconds\n\n")
+cat("Done in", round(difftime(Sys.time(), t0, units = "mins"), 1), "minutes\n\n")
 
 # NES = observed ES / mean(permutation ES on the SAME side of zero) - the
 # standard Subramanian et al. 2005 normalization. On rare pathways where
@@ -580,20 +601,28 @@ hit_idx_sui <- lapply(gene_sets_sui, function(g) which(ranked_genes_sui %in% g))
 hit_idx_sui <- hit_idx_sui[sapply(hit_idx_sui, length) >= 3]
 es_obs_sui <- sapply(hit_idx_sui, calc_es, scores_abs = abs(ranked_scores_sui), N = N_sui)
 
-# Same reasoning as n_perm above: 2000 (up from 1000) gives finer p-value
-# resolution and makes the one-sided-null edge case (see the fallback
-# normalization below) rarer. This is gene-label permutation (random gene
-# sets of the same size drawn from all ~20k+ ranked genes), so the
-# permutation space is effectively unlimited - no ceiling concern here.
-n_perm2 <- 2000
+# Same reasoning as n_perm above, kept at 1000 for consistency (see that
+# comment for why 1000 rather than 2000). This loop is much lighter than
+# POP's - no model refit per permutation, just resampling - so it finishes
+# quickly regardless; the fallback normalization below is what actually
+# guarantees no NA, not the permutation count. This is gene-label
+# permutation (random gene sets of the same size drawn from all ~20k+
+# ranked genes), so the permutation space is effectively unlimited - no
+# ceiling concern here.
+n_perm2 <- 1000
 cat("Running", n_perm2, "permutations (pathway shuffling) for SUI...\n")
 t0 <- Sys.time()
 scores_abs_sui <- abs(ranked_scores_sui)
 perm_es_sui <- matrix(NA_real_, nrow = n_perm2, ncol = length(hit_idx_sui))
+progress_step2 <- max(1, round(n_perm2 / 10))
 for (i in seq_len(n_perm2)) {
   for (j in seq_along(hit_idx_sui)) {
     hidx <- sample.int(N_sui, length(hit_idx_sui[[j]]))
     perm_es_sui[i, j] <- calc_es(hidx, scores_abs_sui, N_sui)
+  }
+  if (i %% progress_step2 == 0 || i == n_perm2) {
+    cat("  ", i, "/", n_perm2, "permutations done\n")
+    flush(stdout())
   }
 }
 cat("Done in", round(difftime(Sys.time(), t0, units = "secs"), 1), "seconds\n\n")
