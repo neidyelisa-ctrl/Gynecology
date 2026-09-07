@@ -44,7 +44,7 @@
 ## =============================================================================
 ## PART 0: working directory + automatic package installation
 ## =============================================================================
-setwd("E:/POP+SUI 63")  # adjust this one line if your folder is different
+setwd("E:/POP+SUI FGSEA")  # adjust this one line if your folder is different
 cat("Working directory set to:", getwd(), "\n\n")
 
 # What each package is for:
