@@ -1498,7 +1498,7 @@ make_fgsea_band_barplot <- function(fgsea_res, title, n_each = 15) {
     geom_vline(xintercept = 0, color = "grey30") +
     facet_wrap(~Band, scales = "free_y", ncol = 1) +
     labs(title = title,
-         subtitle = "Top 15 strong AND top 15 moderate shown separately - see comment in script for why",
+         subtitle = "Top 15 pathways in each band, ranked separately, so moderate hits are not\ncrowded out by the strongest ones",
          x = "Normalized Enrichment Score (NES)", y = NULL) +
     theme_bw() + theme(axis.text.y = element_text(size = 8), legend.position = "none",
                         strip.text = element_text(size = 10, face = "bold"),
