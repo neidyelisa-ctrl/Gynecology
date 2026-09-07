@@ -102,22 +102,37 @@ setwd("figures/pathview")  # pathview writes its output PNGs to the working dire
 cat("Rendering", length(pathway_ids), "pathway diagram(s) - needs internet the first\n")
 cat("time each pathway ID is drawn (downloads the official KEGG map)...\n\n")
 
+## pathview's own KEGG download step can fail with just a WARNING (not an R
+## error) - e.g. a transient server hiccup - in which case it silently skips
+## that pathway and returns without producing an output file, but WITHOUT
+## raising anything a plain tryCatch(error=...) would catch. So success is
+## verified here by checking the actual output PNG exists, not by the
+## absence of an R error, and a failed download gets a couple of automatic
+## retries (transient KEGG server issues are common and usually clear up in
+## a few seconds).
+n_retries <- 2
 rendered <- character(0)
 failed <- character(0)
 for (pid in pathway_ids) {
   cat("Pathway", pid, "(", kegg_both$PathwayName[kegg_both$PATH == pid], ") ... ")
-  result <- tryCatch({
-    pathview(gene.data = gene_mat, pathway.id = pid, species = "hsa",
-             gene.idtype = "ENTREZID", out.suffix = "POP_vs_SUI",
-             kegg.native = TRUE, same.layer = TRUE,
-             low = list(gene = "#2166AC"), mid = list(gene = "#F7F7F7"), high = list(gene = "#B2182B"),
-             na.col = "grey85")
-    "ok"
-  }, error = function(e) { cat("FAILED -", conditionMessage(e), "\n"); "error" })
-  if (identical(result, "ok")) {
+  expected_file <- paste0("hsa", pid, ".POP_vs_SUI.png")
+  ok <- FALSE
+  for (attempt in seq_len(n_retries + 1)) {
+    tryCatch({
+      suppressWarnings(pathview(gene.data = gene_mat, pathway.id = pid, species = "hsa",
+               gene.idtype = "ENTREZID", out.suffix = "POP_vs_SUI",
+               kegg.native = TRUE, same.layer = TRUE,
+               low = list(gene = "#2166AC"), mid = list(gene = "#F7F7F7"), high = list(gene = "#B2182B"),
+               na.col = "grey85"))
+    }, error = function(e) NULL)
+    if (file.exists(expected_file)) { ok <- TRUE; break }
+    if (attempt <= n_retries) { cat("(retry", attempt, ") "); Sys.sleep(2) }
+  }
+  if (ok) {
     cat("done\n")
     rendered <- c(rendered, pid)
   } else {
+    cat("FAILED after", n_retries + 1, "attempt(s) - likely a transient KEGG server issue\n")
     failed <- c(failed, pid)
   }
 }
@@ -126,9 +141,12 @@ setwd(orig_wd)
 cat("\n=== Summary ===\n")
 cat("Rendered:", length(rendered), "of", length(pathway_ids), "pathways -> figures/pathview/\n")
 if (length(failed) > 0) {
-  cat("Could not render:", paste(failed, collapse = ", "),
-      "(usually means no internet reachable, or that ID has no KEGG map -\n")
-  cat("check the pathway name against kegg.jp manually if this happens)\n")
+  cat("Could not render:", paste(failed, collapse = ", "), "even after retrying -\n")
+  cat("usually a transient KEGG server issue, occasionally means no internet\n")
+  cat("reachable or that ID has no KEGG map (check the pathway name against\n")
+  cat("kegg.jp manually if that's the case). Re-running this script later will\n")
+  cat("retry only these - the rest are already cached on disk and pathview will\n")
+  cat("reuse them, not re-download.\n")
 }
 cat("\nEach output file has POP's fold-change on the left half of every gene\n")
 cat("box and SUI's on the right half - red = up, blue = down, grey = gene\n")
