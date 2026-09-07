@@ -1,0 +1,137 @@
+# =============================================================================
+# Pathview diagrams: official KEGG pathway maps, colored by YOUR own POP and
+# SUI fold-change data - one diagram per pathway, POP and SUI shown side by
+# side inside each gene box.
+# =============================================================================
+#
+# WHICH PATHWAYS GET A DIAGRAM: decided automatically from the fgsea results
+# script 16 already produced - results/KEGG_significant_in_BOTH_diseases_
+# fgsea.csv, i.e. every KEGG pathway with padj<0.25 in BOTH POP and SUI. This
+# is deliberately NOT a hardcoded pathway list: whatever comes out of your
+# fgsea run this time (5 pathways, 8, whatever it is) is what gets rendered -
+# if you re-run script 16 later and the significant set changes slightly,
+# re-running this script picks that up automatically, no manual editing.
+#
+# REQUIRES: script 16 already run in this same folder (needs its output
+# files in results/). Also requires internet the first time each pathway ID
+# is rendered - pathview downloads the official KEGG diagram (XML+PNG) for
+# that pathway and caches it locally; re-running later for the same pathway
+# ID reuses the cached file, no internet needed then.
+#
+# OUTPUT: figures/pathview/hsa<PATHID>.POP_vs_SUI.png - one per significant
+# pathway, each gene box split into two colors (left = POP, right = SUI;
+# red = upregulated, blue = downregulated, matching the color scheme used
+# throughout this project's other figures).
+
+setwd("E:/POP+SUI FGSEA")  # SAME folder as script 16 - change this one line only
+cat("Working directory set to:", getwd(), "\n\n")
+
+if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
+for (pkg in c("pathview", "org.Hs.eg.db", "AnnotationDbi")) {
+  if (!requireNamespace(pkg, quietly = TRUE)) {
+    cat("Installing (Bioconductor):", pkg, "...\n")
+    BiocManager::install(pkg, update = FALSE, ask = FALSE)
+  }
+}
+suppressMessages({
+  library(pathview)
+  library(org.Hs.eg.db)
+  library(AnnotationDbi)
+})
+
+required_files <- c(
+  "results/KEGG_significant_in_BOTH_diseases_fgsea.csv",
+  "results/POP_DESeq2_full_table.csv",
+  "results/SUI_Wei2020_full_table.csv"
+)
+missing_files <- required_files[!file.exists(required_files)]
+if (length(missing_files) > 0) {
+  stop(
+    "\n\nMissing file(s) from script 16's output:\n  - ", paste(missing_files, collapse = "\n  - "),
+    "\n\nRun 16_fgsea_POP_vs_SUI.R in this same folder first, then run this script.\n"
+  )
+}
+
+## --- Step 1: which pathways get a diagram - decided from THIS run's fgsea
+## results, not a fixed list ------------------------------------------------
+kegg_both <- read.csv("results/KEGG_significant_in_BOTH_diseases_fgsea.csv", colClasses = c(PATH = "character"))
+cat("Pathways significant in BOTH POP and SUI (FDR<0.25) this run:", nrow(kegg_both), "\n")
+if (nrow(kegg_both) > 0) {
+  print(kegg_both[, c("PATH", "PathwayName", "NES_POP", "padj_POP", "NES_SUI", "padj_SUI")])
+}
+cat("\n")
+
+if (nrow(kegg_both) == 0) {
+  stop(
+    "\n\nNo pathway is significant in both POP and SUI in this run's fgsea\n",
+    "results - nothing to draw. This is a real result, not a script error:\n",
+    "check results/KEGG_all_common_pathways_fgsea.csv for near-significant\n",
+    "pathways if you want to pick a few by hand instead.\n"
+  )
+}
+pathway_ids <- kegg_both$PATH
+
+## --- Step 2: per-gene fold-change data for POP and SUI, keyed by Entrez ID
+## (KEGG diagrams are keyed by Entrez ID, not gene symbol) ------------------
+pop_full <- read.csv("results/POP_DESeq2_full_table.csv")
+sui_full <- read.csv("results/SUI_Wei2020_full_table.csv")
+
+sym_to_entrez <- function(symbols) {
+  ann <- suppressWarnings(select(org.Hs.eg.db, keys = unique(symbols), keytype = "SYMBOL", columns = "ENTREZID"))
+  ann[!is.na(ann$ENTREZID) & !duplicated(ann$SYMBOL), ]
+}
+
+pop_ann <- sym_to_entrez(pop_full$Gene)
+pop_lfc <- setNames(pop_full$logFC[match(pop_ann$SYMBOL, pop_full$Gene)], pop_ann$ENTREZID)
+
+sui_ann <- sym_to_entrez(sui_full$GeneSymbol)
+sui_lfc <- setNames(sui_full$logFC[match(sui_ann$SYMBOL, sui_full$GeneSymbol)], sui_ann$ENTREZID)
+
+all_entrez <- union(names(pop_lfc), names(sui_lfc))
+gene_mat <- cbind(POP = pop_lfc[all_entrez], SUI = sui_lfc[all_entrez])
+rownames(gene_mat) <- all_entrez
+cat("Combined POP+SUI logFC matrix ready:", nrow(gene_mat), "genes (Entrez ID) x 2 diseases\n")
+cat("(NA for a gene in one column just means that gene wasn't in that\n")
+cat("disease's own tested/DEG list - pathview draws it grey, not an error)\n\n")
+
+## --- Step 3: render one diagram per significant pathway --------------------
+dir.create("figures/pathview", showWarnings = FALSE, recursive = TRUE)
+orig_wd <- getwd()
+setwd("figures/pathview")  # pathview writes its output PNGs to the working directory
+
+cat("Rendering", length(pathway_ids), "pathway diagram(s) - needs internet the first\n")
+cat("time each pathway ID is drawn (downloads the official KEGG map)...\n\n")
+
+rendered <- character(0)
+failed <- character(0)
+for (pid in pathway_ids) {
+  cat("Pathway", pid, "(", kegg_both$PathwayName[kegg_both$PATH == pid], ") ... ")
+  result <- tryCatch({
+    pathview(gene.data = gene_mat, pathway.id = pid, species = "hsa",
+             gene.idtype = "ENTREZID", out.suffix = "POP_vs_SUI",
+             kegg.native = TRUE, same.layer = TRUE,
+             low = list(gene = "#2166AC"), mid = list(gene = "#F7F7F7"), high = list(gene = "#B2182B"),
+             na.col = "grey85")
+    "ok"
+  }, error = function(e) { cat("FAILED -", conditionMessage(e), "\n"); "error" })
+  if (identical(result, "ok")) {
+    cat("done\n")
+    rendered <- c(rendered, pid)
+  } else {
+    failed <- c(failed, pid)
+  }
+}
+setwd(orig_wd)
+
+cat("\n=== Summary ===\n")
+cat("Rendered:", length(rendered), "of", length(pathway_ids), "pathways -> figures/pathview/\n")
+if (length(failed) > 0) {
+  cat("Could not render:", paste(failed, collapse = ", "),
+      "(usually means no internet reachable, or that ID has no KEGG map -\n")
+  cat("check the pathway name against kegg.jp manually if this happens)\n")
+}
+cat("\nEach output file has POP's fold-change on the left half of every gene\n")
+cat("box and SUI's on the right half - red = up, blue = down, grey = gene\n")
+cat("not in that disease's tested list. Compare directly against the\n")
+cat("Focal adhesion / Ribosome / etc. discussion already written up for the\n")
+cat("thesis - this is the same numbers, drawn onto the real KEGG diagram.\n")
