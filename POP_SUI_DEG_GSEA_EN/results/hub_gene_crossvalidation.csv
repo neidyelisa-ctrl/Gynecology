@@ -1,0 +1,21 @@
+"Group","Gene","N_enriched_terms_matched","Matched_terms","Confirmed_by_enrichment"
+"POP","KRT78",8,"Skin development; Extracellular space; Extracellular region; Mixed, incl. Formation of the cornified envelope, and Establishment of skin barrier; Formation of the cornified envelope, and Autosomal recessive congenital ichthyosis; Formation of the cornified envelope, and Serpin, conserved site; Mixed, incl. PLAC8 family, and Cornified envelope assembly; Mixed, incl. Pachyonychia congenita, and Netherton syndrome",TRUE
+"POP","KRT10",14,"Skin development; Cornified envelope; Extracellular space; Extracellular region; Cell periphery; Mixed, incl. Formation of the cornified envelope, and Establishment of skin barrier; Formation of the cornified envelope, and Autosomal recessive congenital ichthyosis; Formation of the cornified envelope, and Serpin, conserved site; Erythema; Ichthyosis; Abnormal epidermal morphology; Ichthyosis; Skin disease; Ichthyosis",TRUE
+"POP","KRT1",14,"Skin development; Cornified envelope; Extracellular space; Extracellular region; Cell periphery; Mixed, incl. Formation of the cornified envelope, and Establishment of skin barrier; Formation of the cornified envelope, and Autosomal recessive congenital ichthyosis; Formation of the cornified envelope, and Serpin, conserved site; Erythema; Ichthyosis; Abnormal epidermal morphology; Ichthyosis; Skin disease; Ichthyosis",TRUE
+"POP","ALOX12B",7,"Skin development; Erythema; Ichthyosis; Abnormal epidermal morphology; Ichthyosis; Skin disease; Ichthyosis",TRUE
+"POP","ALOXE3",8,"Skin development; Mixed, incl. Formation of the cornified envelope, and Establishment of skin barrier; Formation of the cornified envelope, and Autosomal recessive congenital ichthyosis; Erythema; Ichthyosis; Ichthyosis; Skin disease; Ichthyosis",TRUE
+"POP","ABCB1",3,"Extracellular space; Extracellular region; Cell periphery",TRUE
+"POP","SLC27A4",5,"Skin development; Cell periphery; Ichthyosis; Skin disease; Ichthyosis",TRUE
+"POP","CYCS",0,"",FALSE
+"POP","KRTDAP",7,"Extracellular space; Extracellular region; Mixed, incl. Formation of the cornified envelope, and Establishment of skin barrier; Formation of the cornified envelope, and Autosomal recessive congenital ichthyosis; Formation of the cornified envelope, and Serpin, conserved site; Mixed, incl. PLAC8 family, and Cornified envelope assembly; Mixed, incl. Pachyonychia congenita, and Netherton syndrome",TRUE
+"POP","TXN",2,"Extracellular space; Extracellular region",TRUE
+"SUI","RPLP2",5,"Ribosome; Cytoplasmic translation; Translation; Cellular macromolecule biosynthetic process; Structural constituent of ribosome",TRUE
+"SUI","RPS23",5,"Ribosome; Cytoplasmic translation; Translation; Cellular macromolecule biosynthetic process; Structural constituent of ribosome",TRUE
+"SUI","RPS15A",5,"Ribosome; Cytoplasmic translation; Translation; Cellular macromolecule biosynthetic process; Structural constituent of ribosome",TRUE
+"SUI","RPL9",5,"Ribosome; Cytoplasmic translation; Translation; Cellular macromolecule biosynthetic process; Structural constituent of ribosome",TRUE
+"SUI","SEC61B",0,"",FALSE
+"SUI","RPL15",5,"Ribosome; Cytoplasmic translation; Translation; Cellular macromolecule biosynthetic process; Structural constituent of ribosome",TRUE
+"SUI","RPS27A",5,"Ribosome; Cytoplasmic translation; Translation; Cellular macromolecule biosynthetic process; Structural constituent of ribosome",TRUE
+"SUI","RPS8",5,"Ribosome; Cytoplasmic translation; Translation; Cellular macromolecule biosynthetic process; Structural constituent of ribosome",TRUE
+"SUI","RPL3",5,"Ribosome; Cytoplasmic translation; Translation; Cellular macromolecule biosynthetic process; Structural constituent of ribosome",TRUE
+"SUI","RPL7A",5,"Ribosome; Cytoplasmic translation; Translation; Cellular macromolecule biosynthetic process; Structural constituent of ribosome",TRUE
