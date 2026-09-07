@@ -272,6 +272,26 @@ calc_es <- function(hit_idx, scores_abs, N) {
 
 
 ## =============================================================================
+## CHECKPOINT: skip Parts 1-4 (the slow ones - DEG analysis plus both
+## permutation GSEA loops) on a re-run, if nothing that affects them changed.
+## Parts 5 onward (fgsea comparison, all figures, tables) are fast - they
+## don't need the permutation loops re-run just because a chart or table
+## further down was edited. Delete results/checkpoint_after_part4.RData to
+## force a full re-run from scratch (e.g. after changing the raw data files
+## or any code inside Parts 1-4 above this checkpoint).
+## =============================================================================
+checkpoint_file <- "results/checkpoint_after_part4.RData"
+.fgsea_avail_now <- has_fgsea; .GSVA_avail_now <- has_GSVA; .clusterProfiler_avail_now <- has_clusterProfiler
+
+if (file.exists(checkpoint_file)) {
+  cat("\n=== Checkpoint found:", checkpoint_file, "===\n")
+  cat("Loading Parts 1-4 results instead of re-running them. Delete this file\n")
+  cat("if you changed the raw data files or any code in Parts 1-4, then re-run.\n\n")
+  load(checkpoint_file)
+  has_fgsea <- .fgsea_avail_now; has_GSVA <- .GSVA_avail_now; has_clusterProfiler <- .clusterProfiler_avail_now
+} else {
+
+## =============================================================================
 ## PART 1: load POP data (GSE208261) and build the 12x12 design
 ## =============================================================================
 cat("\n================ PART 1: POP data (GSE208261) ================\n\n")
@@ -662,6 +682,13 @@ cat("=== RESULT: preranked GSEA in SUI ===\n")
 cat("Pathways significant at FDR<0.25:", sum(gsea_sui$p.adjust < 0.25, na.rm = TRUE), "of", nrow(gsea_sui), "\n")
 cat("Pathways significant at FDR<0.05:", sum(gsea_sui$p.adjust < 0.05, na.rm = TRUE), "\n\n")
 
+cat("\n=== Saving checkpoint:", checkpoint_file, "===\n")
+cat("Parts 1-4 (DEG analysis + both permutation GSEA loops - the slow part)\n")
+cat("are done. Re-running this script will now skip straight to Part 5 and\n")
+cat("finish in a fraction of the time, as long as this file still exists.\n\n")
+save.image(checkpoint_file)
+
+} # end of the Parts 1-4 checkpoint block
 
 ## =============================================================================
 ## PART 5: shared pathways between POP and SUI + gene table
