@@ -1426,13 +1426,25 @@ make_fgsea_barplot <- function(fgsea_res, title, n_top = 15) {
     theme_bw() + theme(axis.text.y = element_text(size = 8), plot.title = element_text(size = 12))
 }
 ggsave("figures/fgsea_KEGG_barplot_POP.png",
-       make_fgsea_barplot(fgsea_pop, "GSEA via fgsea (official) - top KEGG pathways in POP"),
+       make_fgsea_barplot(fgsea_pop, "GSEA via fgsea (official) - top 15 KEGG pathways in POP (by p-value)"),
        width = 12, height = 6.5, dpi = 300)
-cat("Saved: figures/fgsea_KEGG_barplot_POP.png\n")
+cat("Saved: figures/fgsea_KEGG_barplot_POP.png (top 15 by p-value only - POP has 82\n")
+cat("pathways at FDR<0.25 total, too many for one readable chart; see\n")
+cat("figures/fgsea_KEGG_barplot_POP_FDR025.png further down for the complete picture)\n")
+# SUI has far fewer significant pathways than POP (19 vs 82), so unlike POP's
+# chart above, filtering to padj<0.25 FIRST and only then taking the top N
+# comfortably fits all of them - no pathway is cut off by an arbitrary top-15
+# limit the way "top 15 by p-value across all ~200 tested" would (that
+# previously dropped real, significant-but-weaker hits like Glycolysis/
+# Gluconeogenesis, padj=0.245, purely because 18 other SUI pathways had a
+# smaller p-value - not because it wasn't significant).
+n_sig_sui <- sum(fgsea_sui$padj < 0.25, na.rm = TRUE)
 ggsave("figures/fgsea_KEGG_barplot_SUI.png",
-       make_fgsea_barplot(fgsea_sui, "GSEA via fgsea (official) - top KEGG pathways in SUI"),
-       width = 12, height = 6.5, dpi = 300)
-cat("Saved: figures/fgsea_KEGG_barplot_SUI.png\n\n")
+       make_fgsea_barplot(subset(fgsea_sui, padj < 0.25),
+                          paste0("GSEA via fgsea (official) - all ", n_sig_sui, " KEGG pathways significant in SUI (FDR<0.25)"),
+                          n_top = n_sig_sui),
+       width = 12, height = max(6.5, 0.4 * n_sig_sui + 1.5), dpi = 300)
+cat("Saved: figures/fgsea_KEGG_barplot_SUI.png (all", n_sig_sui, "significant pathways shown, none cut off)\n\n")
 
 ## --- 11e: shared-pathway NES heatmap (fgsea only, from shared_025_fixed) -
 ## shared_025_fixed was built in Part 7c: same pathway list as the old
