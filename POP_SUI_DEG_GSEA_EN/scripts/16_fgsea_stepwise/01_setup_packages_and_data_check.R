@@ -38,7 +38,7 @@
 # falling back to something else.
 # =============================================================================
 
-setwd("E:/POP+SUI FGSEA")  # adjust this one line if your folder is different
+setwd("E:/POP+SUI ONE")  # adjust this one line if your folder is different
 cat("Working directory set to:", getwd(), "\n\n")
 
 # What each package is for:

@@ -32,7 +32,7 @@
 # throughout this project's other figures).
 # =============================================================================
 
-setwd("E:/POP+SUI FGSEA")  # SAME folder as the rest of the pipeline - change this one line only
+setwd("E:/POP+SUI ONE")  # SAME folder as the rest of the pipeline - change this one line only
 cat("Working directory set to:", getwd(), "\n\n")
 
 if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")

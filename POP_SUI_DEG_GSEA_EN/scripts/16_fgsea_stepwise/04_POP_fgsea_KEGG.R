@@ -13,7 +13,7 @@
 # OUTPUT: results/POP_fgsea_KEGG_full.csv - every KEGG pathway tested.
 # =============================================================================
 
-setwd("E:/POP+SUI FGSEA")  # safe to repeat - keeps this correct even in a fresh R session
+setwd("E:/POP+SUI ONE")  # safe to repeat - keeps this correct even in a fresh R session
 
 cat("================ STEP 4: GSEA (fgsea) in POP ================\n\n")
 cat("What GSEA asks: even with no individual gene reaching significance, is a\n")

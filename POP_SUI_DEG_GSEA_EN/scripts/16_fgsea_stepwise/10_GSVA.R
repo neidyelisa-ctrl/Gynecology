@@ -21,7 +21,7 @@
 # is an independent cross-check).
 # =============================================================================
 
-setwd("E:/POP+SUI FGSEA")  # safe to repeat - keeps this correct even in a fresh R session
+setwd("E:/POP+SUI ONE")  # safe to repeat - keeps this correct even in a fresh R session
 
 cat("================ STEP 10: GSVA on KEGG pathways ================\n\n")
 

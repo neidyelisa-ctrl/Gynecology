@@ -12,7 +12,7 @@
 # builds R objects in memory: meta, counts_all, group_full, tissue_full.
 # =============================================================================
 
-setwd("E:/POP+SUI FGSEA")  # safe to repeat - keeps this correct even in a fresh R session
+setwd("E:/POP+SUI ONE")  # safe to repeat - keeps this correct even in a fresh R session
 
 cat("\n================ STEP 2: POP data (GSE208261) ================\n\n")
 

@@ -19,7 +19,7 @@
 #   figures/shared_pathways_NES_comparison.png
 # =============================================================================
 
-setwd("E:/POP+SUI FGSEA")  # safe to repeat - keeps this correct even in a fresh R session
+setwd("E:/POP+SUI ONE")  # safe to repeat - keeps this correct even in a fresh R session
 
 cat("================ STEP 7: figures ================\n\n")
 cat("All figures are saved into the 'figures' subfolder of your working\n")

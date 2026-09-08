@@ -21,7 +21,7 @@
 # figures/fgsea_KEGG_ECM_targeted_panel.png
 # =============================================================================
 
-setwd("E:/POP+SUI FGSEA")  # safe to repeat - keeps this correct even in a fresh R session
+setwd("E:/POP+SUI ONE")  # safe to repeat - keeps this correct even in a fresh R session
 
 cat("================ STEP 12: ECM/junction targeted panel ================\n\n")
 

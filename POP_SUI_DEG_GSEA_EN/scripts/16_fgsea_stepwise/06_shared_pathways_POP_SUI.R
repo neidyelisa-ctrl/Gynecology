@@ -17,7 +17,7 @@
 #                                                          BOTH
 # =============================================================================
 
-setwd("E:/POP+SUI FGSEA")  # safe to repeat - keeps this correct even in a fresh R session
+setwd("E:/POP+SUI ONE")  # safe to repeat - keeps this correct even in a fresh R session
 
 cat("================ STEP 6: pathways common to POP and SUI ================\n\n")
 

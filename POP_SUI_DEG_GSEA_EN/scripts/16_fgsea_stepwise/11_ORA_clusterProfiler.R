@@ -25,7 +25,7 @@
 # clusterProfiler is installed).
 # =============================================================================
 
-setwd("E:/POP+SUI FGSEA")  # safe to repeat - keeps this correct even in a fresh R session
+setwd("E:/POP+SUI ONE")  # safe to repeat - keeps this correct even in a fresh R session
 
 cat("================ STEP 11: ORA via clusterProfiler ================\n\n")
 

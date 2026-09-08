@@ -20,7 +20,7 @@
 #   figures/GO_BP_barplot_SUI.png
 # =============================================================================
 
-setwd("E:/POP+SUI FGSEA")  # safe to repeat - keeps this correct even in a fresh R session
+setwd("E:/POP+SUI ONE")  # safe to repeat - keeps this correct even in a fresh R session
 
 cat("================ STEP 9: GO Biological Process enrichment ================\n\n")
 

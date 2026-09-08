@@ -15,7 +15,7 @@
 #   results/POP_voom_limma_full_table.csv   - every gene tested, voom/limma
 # =============================================================================
 
-setwd("E:/POP+SUI FGSEA")  # safe to repeat - keeps this correct even in a fresh R session
+setwd("E:/POP+SUI ONE")  # safe to repeat - keeps this correct even in a fresh R session
 
 cat("================ STEP 3: differentially expressed genes (DEG) in POP ================\n\n")
 
