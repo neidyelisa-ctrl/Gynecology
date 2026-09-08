@@ -93,23 +93,38 @@ for (pkg in cran_packages) {
 }
 
 # GSVA and clusterProfiler: independent extra methods (steps 10-11), not
-# required for the core POP-vs-SUI KEGG/GO comparison (steps 2-9, 12). Some
-# of their dependencies compile C/C++/Fortran code, which on Windows needs
-# Rtools matching your R version - if that is missing, the install below
-# will print warnings and not succeed for that one package. Rather than
-# letting that crash a later step, steps 10 and 11 each check their own
-# flag and skip themselves cleanly if their package is missing.
+# required for the core POP-vs-SUI KEGG/GO comparison (steps 2-9, 12) and
+# NOT used anywhere in the final results/report - purely optional
+# cross-checks. Skipped by default (install_optional_extras <- FALSE below)
+# because trying to reach Bioconductor's servers from a network that blocks
+# them (common on university/corporate networks and firewalls) can hang for
+# a very long time with no error and no progress, since BiocManager retries
+# across ~9 different repository URLs with no built-in time limit. If you
+# are on a network that can reach bioconductor.org and want to try GSVA/
+# clusterProfiler, change the line below to TRUE - a 20-second time limit
+# per download is set either way, so a blocked network now fails fast
+# instead of hanging.
+install_optional_extras <- FALSE  # set to TRUE only if you want to try installing GSVA/clusterProfiler
 optional_pkgs <- c("GSVA", "clusterProfiler")
-for (pkg in optional_pkgs) {
-  if (!requireNamespace(pkg, quietly = TRUE)) {
-    cat("Installing (Bioconductor):", pkg, "... (needs internet, this one time)\n")
-    tryCatch(
-      BiocManager::install(pkg, update = FALSE, ask = FALSE),
-      error = function(e) cat("Install of", pkg, "raised an error - will be skipped:", conditionMessage(e), "\n")
-    )
-  } else {
-    cat("OK, already installed:", pkg, "\n")
+if (install_optional_extras) {
+  old_timeout <- getOption("timeout")
+  options(timeout = 20)
+  for (pkg in optional_pkgs) {
+    if (!requireNamespace(pkg, quietly = TRUE)) {
+      cat("Installing (Bioconductor):", pkg, "... (needs internet, this one time)\n")
+      tryCatch(
+        BiocManager::install(pkg, update = FALSE, ask = FALSE),
+        error = function(e) cat("Install of", pkg, "raised an error - will be skipped:", conditionMessage(e), "\n")
+      )
+    } else {
+      cat("OK, already installed:", pkg, "\n")
+    }
   }
+  options(timeout = old_timeout)
+} else {
+  cat("Skipping GSVA/clusterProfiler install (install_optional_extras is FALSE) -\n")
+  cat("steps 10 and 11 will skip themselves cleanly; nothing else is affected.\n")
+  cat("If either package happens to already be installed, it will still be used.\n\n")
 }
 
 cat("\n=== Loading packages into the session ===\n\n")
