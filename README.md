@@ -957,3 +957,38 @@ painéis de literatura).
   enfraquecimento estrutural crônico) — um ponto de discussão legítimo para a tese, não uma
   falha em achar convergência.
 - `results/GSEA_POP_vs_SUI36h_real_RNAseq.xlsx` — deliverable completo em inglês (5 abas).
+
+## DEG só entre as 12 amostras de Controle do GSE208261 (idosa vs. jovem)
+
+A usuária pediu, à parte da comparação POP-vs-Controle principal, um teste de DEG **só entre
+as 12 amostras de Controle**, divididas 6 vs. 6. **Nota de rótulo**: a usuária descreveu essa
+divisão como "tipo de tecido"; nos metadados do GSE208261 e em todo o pipeline já existente
+(`R/pop_age_shrink_4combos_diagnostic.R`, linha 80 deste README) essa divisão 6×6 é o grupo
+etário (idosa = "D", jovem = "Y") — não há anotação de sítio anatômico diferente por amostra
+no dataset. Mantive a comparação exatamente como pedida (D vs. Y dentro dos 12 Controles),
+só registrando a diferença de rótulo para não confundir com um fator de tecido real.
+
+- **Ambiente sem R**: esta sessão não tem R/Bioconductor instalado (as análises anteriores do
+  projeto foram rodadas em outra sessão). Usei `pydeseq2` (reimplementação em Python do
+  DESeq2, mesmo método estatístico — binomial negativa + teste de Wald), instalado via pip
+  neste ambiente. `R/analysis_control_only_D_vs_Y_pydeseq2.py` — script completo.
+- Filtro de baixa contagem: genes com contagem ≥10 em pelo menos 6 das 12 amostras (tamanho
+  do menor grupo) — 23.905 de 39.376 genes passam.
+- **Resultado**: com FDR<0,05 e |log2FC|>1 (limiar solicitado pela usuária), **248 DEGs
+  significativos** só por causa do grupo etário, dentro das amostras de Controle (sem nenhum
+  POP envolvido).
+- **O que isso significa**: o grupo etário sozinho já produz uma diferença de expressão real e
+  substancial (248 genes) mesmo entre as amostras saudáveis — é por isso que o pipeline
+  principal do projeto sempre usou `design = ~ age_group + condition` para a comparação
+  POP-vs-Controle, ajustando por esse fator em vez de ignorá-lo.
+- **Sobreposição com os DEGs principais do POP**: dos 642 DEGs do POP-vs-Controle, **16
+  (2,5%) também aparecem como DEGs significativos aqui** (idade, não POP) — uma fração pequena,
+  o que é tranquilizador: a maior parte do sinal POP-vs-Controle não é explicada simplesmente
+  por diferença de idade entre os grupos.
+- **Checagem nos 7 genes de interesse do projeto** (CWH43, INPP4B, CALML5, KRT10, SERPINB2,
+  DMKN, ZCCHC12): nenhum é significativo aqui por idade sozinha (todos padj>0,05, exceto KRT10
+  que teve padj=NA — sinal de outlier de uma amostra, não resultado confiável). Ou seja, o
+  achado desses 7 genes no POP não parece ser artefato de confundimento por idade.
+- `results/POP_GSE208261_Control_D_vs_Y_DESeq2_completo.csv` — resultado completo (23.905
+  genes testados). `results/POP_GSE208261_Control_D_vs_Y_DEG_sig.csv` — só os 248
+  significativos.
