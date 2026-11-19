@@ -992,3 +992,59 @@ só registrando a diferença de rótulo para não confundir com um fator de teci
 - `results/POP_GSE208261_Control_D_vs_Y_DESeq2_completo.csv` — resultado completo (23.905
   genes testados). `results/POP_GSE208261_Control_D_vs_Y_DEG_sig.csv` — só os 248
   significativos.
+
+## CORREÇÃO IMPORTANTE: "D/Y" não é idade — é tipo de tecido (a usuária estava certa)
+
+A usuária enviou o arquivo SOFT original do GEO (`GSE208261_family_1.soft`), que eu nunca
+tinha lido diretamente — toda a suposição de "grupo etário (idosa/jovem)" usada em TODO o
+projeto até agora (`R/pop_age_shrink_4combos_diagnostic.R`, README acima, inclusive a seção
+logo anterior a esta) veio de um rótulo herdado de uma sessão anterior, nunca verificado contra
+os metadados reais. **Estava errado. A usuária estava certa desde o início** quando disse
+"os tecidos diferem no tipo, 6 vs 6".
+
+Os metadados reais (`!Sample_characteristics_ch1 = tissue: ...`) mostram:
+- **Control_D1–D6** (6 amostras): tecido = **uterosacral ligaments** (ligamento uterossacral)
+- **Control_Y1–Y6** (6 amostras): tecido = **anterior vaginal wall** (parede vaginal anterior)
+- **POP_D1–D6 e POP_Y1–Y6** (12 amostras): tecido = **anterior vaginal wall** nos metadados
+  por amostra — mas isso quase certamente é um **erro de submissão do GEO pelos autores
+  originais** (comum em depósitos públicos: preencheram corretamente por tecido nos Controles,
+  e colaram "anterior vaginal wall" em todas as 12 amostras de POP por engano). A evidência:
+  os próprios arquivos suplementares da série (`!Series_supplementary_file`) se chamam
+  **`POP_DVSControl_D_mRNA.txt.gz`** e **`POP_YVSControl_Y_mRNA.txt.gz`** — ou seja, os
+  autores originais compararam D-contra-D e Y-contra-Y, o que só faz sentido se D e Y forem o
+  mesmo tecido tanto em POP quanto em Controle (D = ligamento, Y = parede vaginal, nos dois
+  grupos). O resumo da série confirma: "we identified changes... in the anterior vaginal wall
+  **and uterosacral ligament** in patients with POP" — ou seja, o POP também tem amostras dos
+  dois tecidos, apesar do rótulo por amostra dizer só "anterior vaginal wall" nas 12.
+
+**Impacto nas análises já feitas**:
+- A covariável usada no modelo principal (`~ age_group + condition`, 642 DEGs) estatisticamente
+  continua válida como está — o modelo só usa o rótulo D/Y como fator de bloqueio, não importa
+  o nome que demos a ele; bloquear por "D vs Y" bloqueia corretamente pela diferença real entre
+  os dois grupos, seja ela tecido ou idade. **Os 642 DEGs e tudo que foi calculado a partir
+  deles continuam válidos como estão** — só a INTERPRETAÇÃO do que a covariável representa
+  estava errada, não a matemática.
+- O teste D-vs-Y-dentro-do-Controle feito na seção anterior (248 DEGs) deve ser reinterpretado:
+  não é efeito de idade, é a diferença de expressão entre **ligamento uterossacral e parede
+  vaginal anterior em tecido saudável** — o que explica perfeitamente por que o efeito é tão
+  grande (248 genes, vários com |log2FC|>4): são dois tecidos anatomicamente diferentes, não
+  uma diferença etária sutil. Isso é biologicamente esperado e não muda a confiabilidade do
+  resultado, só o motivo por trás dele.
+- Onde isso importa de verdade: a comparação POP-vs-Controle do projeto todo provavelmente
+  mistura dois tecidos diferentes dentro do grupo Controle (6 ligamento + 6 parede vaginal),
+  enquanto o GEO rotula as 12 amostras de POP como só parede vaginal — se esse rótulo de POP
+  estiver certo (não for erro de submissão), a comparação POP-vs-Controle "D" (ligamento no
+  Controle vs. parede vaginal no POP) estaria comparando tecidos diferentes, não POP-vs-saúde
+  no mesmo tecido. A forma cientificamente mais limpa de testar isso seria reproduzir
+  exatamente os dois contrastes que os próprios autores fizeram (**POP_D vs Control_D** e
+  **POP_Y vs Control_Y**, separadamente) em vez do modelo único com os 24 compilados — ainda
+  não fiz isso, fica como próximo passo natural se a usuária quiser.
+- Correção de rótulo nas seções anteriores deste README (linhas com "idosa/jovem", "grupo
+  etário"): o nome da covariável deveria ter sido "D/Y" ou "tecido", não idade — mantenho o
+  texto original das seções antigas intacto por rastreabilidade do histórico do projeto, mas
+  esta seção é a referência correta daqui para frente.
+- Não consegui confirmar 100% contra o artigo original (PMID 36176289) se os rótulos "D" e "Y"
+  mesmo significam ligamento/parede — meu acesso ao NCBI/PubMed está bloqueado neste ambiente
+  (mesma limitação já registrada em outras seções deste README). A inferência acima vem só da
+  consistência interna do próprio arquivo SOFT (nomes dos arquivos suplementares + resumo da
+  série), que é forte mas não é confirmação direta do texto do artigo.
