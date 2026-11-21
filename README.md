@@ -1048,3 +1048,61 @@ Os metadados reais (`!Sample_characteristics_ch1 = tissue: ...`) mostram:
   (mesma limitação já registrada em outras seções deste README). A inferência acima vem só da
   consistência interna do próprio arquivo SOFT (nomes dos arquivos suplementares + resumo da
   série), que é forte mas não é confirmação direta do texto do artigo.
+
+## R/DESeq2/org.Hs.eg.db instalados offline neste ambiente (via apt)
+
+Este ambiente não tinha R (as duas análises anteriores desta sessão usaram `pydeseq2` em
+Python). Descobri que `r-base-core`, `r-bioc-deseq2` e `r-bioc-org.hs.eg.db` estão disponíveis
+via apt (mirror Ubuntu, sem precisar de CRAN/Bioconductor online, que está bloqueado neste
+ambiente) — instalados com sucesso. Isso restaura o acesso às vias KEGG offline embutidas no
+`org.Hs.eg.db` (mesma fonte usada pela sessão anterior), necessárias para GSEA/ORA de KEGG.
+Próximas análises nesta sessão usam R real de novo, não `pydeseq2`.
+
+## GSEA da tabela SUI_vs_Ctrl (43032_2020_144) x POP
+
+A usuária forneceu uma tabela de microarray SUI-vs-Controle bem maior que os 3 artigos de
+literatura já usados (`43032_2020_144_MOESM2_ESM.xls`, material suplementar de um artigo não
+identificado por título aqui — só o nome do arquivo de supplementary material) — 2 abas
+(up/down), 7.099 probes significativos (Fold Change≥2, p<0,05) dos autores originais, **6.115
+genes únicos após deduplicar por EntrezID** (mantendo o probe de menor p-valor por gene). Pedido
+da usuária: GSEA nessa tabela, GSEA no POP, vias compartilhadas.
+
+- `R/analysis_GSEA_SUI_43032_2020_144_vs_POP.R` — mesma metodologia já estabelecida para Chen
+  2003/2006/Tong 2010 (score = sinal(Regulation) × −log10(p-valor), permutação de rótulo de
+  gene set, FDR<0,25 como limiar — ver ressalva metodológica completa no cabeçalho do script e
+  na seção "GSEA preranked nos 3 artigos de literatura" acima: lista só com os genes já
+  filtrados pelos autores, não o background completo do array). Diferença importante: esta
+  lista (6.115 genes) é **~70-100x maior** que os 3 painéis anteriores (60-90 genes) — poder
+  estatístico bem maior, 221 de 229 vias KEGG testáveis (quase todas, vs 16-47 dos painéis
+  pequenos).
+- **POP usado para comparar**: GSEA real já calculado do **GSE53868 (microarray)**, não do
+  GSE208261 (RNA-seq) — mesmo critério de pareamento de plataforma já usado para os 3 artigos
+  anteriores (microarray com microarray), reaproveitado sem recalcular.
+- **Resultado**: SUI — **46 de 221 vias significativas a FDR<0,25** (9 a FDR<0,05: Ribossomo
+  [03010], Transporte de RNA [03013], via de sinalização de insulina relacionada [04144, nome
+  por conferir], NOD-like receptor [04621, nome por conferir], metabolismo oxidativo [01100 —
+  via genérica de metabolismo, mesmo padrão de baixa especificidade já visto antes no
+  projeto]). POP — 94 de 218 significativas a FDR<0,25 (já calculado antes). **15 vias
+  compartilhadas** (FDR<0,25 dos dois lados).
+- **Concordância de direção (sinal do ES) nas 15 compartilhadas: só 3 de 15 (20%) na mesma
+  direção** — pior que o achado do Chen 2006 (TGF-beta, direção consistente). As 3 concordantes:
+  **00380** (metabolismo de triptofano), **04650** (citotoxicidade mediada por células NK),
+  **05012** (Doença de Parkinson — categoria KEGG "doença", tipicamente genérica/pouco
+  específica, mesma ressalva já feita no projeto para outras vias de "doença"). As outras 12
+  vão em direções opostas entre SUI e POP.
+- **Nomes das vias KEGG**: meu acesso à API do KEGG está bloqueado neste ambiente (mesma
+  limitação já registrada para NCBI/PubMed) — os nomes acima vêm do meu conhecimento prévio dos
+  IDs KEGG padrão, não de uma consulta ao vivo. São IDs estáveis e bem conhecidos, mas recomendo
+  conferir os nomes num site do KEGG antes de citar na tese, especialmente os de interesse
+  central.
+- **Conclusão honesta**: ao contrário do Chen 2006 (TGF-beta, direção consistente, achado
+  mecanisticamente coerente), este cruzamento mostra uma sobreposição real (15 vias, mais do
+  que o esperado por acaso) mas majoritariamente **discordante em direção** — não dá para
+  apontar um eixo biológico único e consistente entre este SUI e o POP a partir deste resultado
+  isolado; tratar como sinal fraco/misto, não como confirmação.
+- `results/SUI_43032_2020_144_combined_deduplicated.csv` — tabela combinada e deduplicada.
+  `results/GSEA_preranked_SUI_43032_2020_144_KEGG.csv` — GSEA completo (221 vias).
+  `results/GSEA_shared_KEGG_SUI43032_2020_144_vs_POP.csv` — as 15 vias compartilhadas, com
+  ES/NES/p-valor dos dois lados e concordância de direção.
+- `data/43032_2020_144_SUI_vs_Ctrl_microarray_MOESM2.xls` — tabela original salva para
+  rastreabilidade.
