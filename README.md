@@ -1117,3 +1117,36 @@ da usuária: GSEA nessa tabela, GSEA no POP, vias compartilhadas.
   com ES/NES/p-valor dos dois lados e concordância de direção.
 - `data/43032_2020_144_SUI_vs_Ctrl_microarray_MOESM2.xls` — tabela original salva para
   rastreabilidade.
+
+## GSEA de POP (18 amostras do mesmo tecido) x SUI, usando as vias KEGG da própria usuária
+
+A usuária forneceu seu próprio arquivo de mapeamento gene→via KEGG
+(`data/KEGG_gene_pathway_mapping_usuaria.csv`, ENTREZID/SYMBOL/PATH, 229 vias — mesmo universo
+do `org.Hs.eg.db` usado antes) e pediu para refazer a GSEA de POP usando só as **18 amostras do
+mesmo tecido** do GSE208261 (12 POP + 6 Controle_Y, todas rotuladas "parede vaginal anterior"
+nos metadados — excluindo os 6 Controle_D de ligamento uterossacral, o tecido diferente
+identificado na correção anterior deste README), e a GSEA de SUI (tabela 43032_2020_144) com a
+mesma fonte de vias, para os dois lados usarem exatamente o mesmo universo de vias KEGG.
+
+- `R/analysis_GSEA_POP18_vs_SUI_user_kegg_mapping.R` — script completo.
+- **POP, 18 amostras tissue-matched**: DESeq2 real (`~condition`, sem covariável D/Y — não
+  precisa mais, tecido é constante agora), filtro ≥10 em ≥9 de 18 amostras (22.801 genes).
+  Só **2 DEGs individuais** significativos (padj<0,05, |log2FC|>1) — esperado com um desenho
+  desbalanceado e pequeno (12 vs 6) — mas GSEA real (permutação de fenótipo, 500 permutações,
+  mesmo método já estabelecido) achou **96 de 218 vias KEGG significativas a FDR<0,25** (88 a
+  FDR<0,05) — reforça o padrão já visto no projeto: convergência fraca a nível de gene
+  individual, forte a nível de via.
+- **SUI (43032_2020_144)**: 40 de 221 vias significativas a FDR<0,25 (5 a FDR<0,05), agora com
+  a mesma fonte de vias do POP.
+- **Vias compartilhadas: 23** (FDR<0,25 dos dois lados). **22 de 23 (96%) na mesma direção** —
+  confirma e reforça o achado anterior (27 vias/96% concordância, calculado com a GSEA do POP
+  nas 24 amostras agrupadas) usando agora uma comparação de tecido mais limpa. As mesmas vias
+  temáticas de adesão/ECM/citoesqueleto aparecem aqui também: adesão focal (04510), interação
+  ECM-receptor (04512), junção aderente (04520), contração de músculo liso vascular (04270),
+  citoesqueleto de actina (04810), via Wnt (04310) — sinal consistente entre as duas versões da
+  análise (18 amostras tissue-matched vs. 24 agrupadas), o que é tranquilizador: o achado não
+  depende de qual subconjunto de amostras POP se usa.
+- `results/POP_GSE208261_18samples_tissuematched_DESeq2_completo.csv`,
+  `results/GSEA_POP_GSE208261_18samples_tissuematched_KEGG.csv`,
+  `results/GSEA_SUI_43032_2020_144_usermapping_KEGG.csv`,
+  `results/GSEA_shared_KEGG_POP18samples_vs_SUI_usermapping.csv` — todos os resultados.
