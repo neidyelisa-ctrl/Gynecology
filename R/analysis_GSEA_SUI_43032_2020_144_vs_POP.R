@@ -57,12 +57,14 @@ cat("Apos deduplicar por EntrezID (melhor probe por gene):", nrow(sui_tab), "gen
 write.csv(sui_tab, "results/SUI_43032_2020_144_combined_deduplicated.csv", row.names = FALSE)
 
 ## -----------------------------------------------------------------------
-## 2) POP: GSEA real ja calculado (GSE53868 microarray), reusado sem mudanca
+## 2) POP: GSEA real ja calculado (GSE208261, RNA-seq - pedido explicito da
+##    usuaria, CORRIGINDO a escolha anterior de GSE53868/microarray), reusado
+##    sem recalcular.
 ## -----------------------------------------------------------------------
-pop_gsea <- read.csv("results/GSEA_POP_GSE53868_KEGG.csv")
+pop_gsea <- read.csv("results/GSEA_POP_GSE208261_RNAseq_KEGG.csv")
 pop_gsea$PATH <- sprintf("%05d", as.integer(pop_gsea$PATH))  # normaliza (zero a esquerda)
 pop_gsea_sig <- subset(pop_gsea, p.adjust < 0.25)
-cat("POP (GSE53868) GSEA real, reusado: ", nrow(pop_gsea_sig), "de", nrow(pop_gsea),
+cat("POP (GSE208261, RNA-seq) GSEA real, reusado: ", nrow(pop_gsea_sig), "de", nrow(pop_gsea),
     "vias KEGG significativas a FDR<0.25;",
     sum(pop_gsea$p.adjust < 0.05, na.rm = TRUE), "a FDR<0.05\n\n")
 
@@ -154,7 +156,7 @@ write.csv(sui_res, "results/GSEA_preranked_SUI_43032_2020_144_KEGG.csv", row.nam
 ## 5) Vias compartilhadas (mesmo criterio dos 3 artigos anteriores: FDR<0.25
 ##    dos dois lados)
 ## -----------------------------------------------------------------------
-cat("\n=== Vias compartilhadas: SUI (43032_2020_144) vs POP (GSE53868) ===\n")
+cat("\n=== Vias compartilhadas: SUI (43032_2020_144) vs POP (GSE208261, RNA-seq) ===\n")
 sui_sig <- subset(sui_res, p.adjust < 0.25)
 common_ids <- intersect(sui_sig$PATH, pop_gsea_sig$PATH)
 cat("SUI significativas (FDR<0.25):", nrow(sui_sig),
@@ -171,7 +173,7 @@ if (length(common_ids) > 0) {
                   by = "PATH", suffixes = c("_SUI","_POP"))
   shared$Same_direction <- sign(shared$ES_SUI) == sign(shared$ES_POP)
   print(shared[, c("PATH","Nh_SUI","ES_SUI","Nh_POP","ES_POP","Same_direction","p.adjust_SUI","p.adjust_POP")])
-  write.csv(shared, "results/GSEA_shared_KEGG_SUI43032_2020_144_vs_POP.csv", row.names = FALSE)
+  write.csv(shared, "results/GSEA_shared_KEGG_SUI43032_2020_144_vs_POP_GSE208261.csv", row.names = FALSE)
 }
 
 cat("\n=== FIM DO SCRIPT ===\n")

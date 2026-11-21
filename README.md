@@ -1075,34 +1075,45 @@ da usuária: GSEA nessa tabela, GSEA no POP, vias compartilhadas.
   lista (6.115 genes) é **~70-100x maior** que os 3 painéis anteriores (60-90 genes) — poder
   estatístico bem maior, 221 de 229 vias KEGG testáveis (quase todas, vs 16-47 dos painéis
   pequenos).
-- **POP usado para comparar**: GSEA real já calculado do **GSE53868 (microarray)**, não do
-  GSE208261 (RNA-seq) — mesmo critério de pareamento de plataforma já usado para os 3 artigos
-  anteriores (microarray com microarray), reaproveitado sem recalcular.
-- **Resultado**: SUI — **46 de 221 vias significativas a FDR<0,25** (9 a FDR<0,05: Ribossomo
-  [03010], Transporte de RNA [03013], via de sinalização de insulina relacionada [04144, nome
-  por conferir], NOD-like receptor [04621, nome por conferir], metabolismo oxidativo [01100 —
-  via genérica de metabolismo, mesmo padrão de baixa especificidade já visto antes no
-  projeto]). POP — 94 de 218 significativas a FDR<0,25 (já calculado antes). **15 vias
-  compartilhadas** (FDR<0,25 dos dois lados).
-- **Concordância de direção (sinal do ES) nas 15 compartilhadas: só 3 de 15 (20%) na mesma
-  direção** — pior que o achado do Chen 2006 (TGF-beta, direção consistente). As 3 concordantes:
-  **00380** (metabolismo de triptofano), **04650** (citotoxicidade mediada por células NK),
-  **05012** (Doença de Parkinson — categoria KEGG "doença", tipicamente genérica/pouco
-  específica, mesma ressalva já feita no projeto para outras vias de "doença"). As outras 12
-  vão em direções opostas entre SUI e POP.
+- **CORREÇÃO**: a primeira versão desta seção comparou com o GSEA do GSE53868 (microarray) por
+  engano — a usuária pediu explicitamente o **GSE208261 (RNA-seq)**, o mesmo dataset da imagem/
+  pasta que ela vinha usando nas análises anteriores desta sessão. Refeito abaixo com o dataset
+  certo.
+- **POP usado para comparar**: GSEA real já calculado do **GSE208261 (RNA-seq, fenótipo
+  permutado, 218 vias testadas)** — reaproveitado sem recalcular
+  (`results/GSEA_POP_GSE208261_RNAseq_KEGG.csv`).
+- **Resultado**: SUI — 46 de 221 vias significativas a FDR<0,25 (9 a FDR<0,05). POP (GSE208261)
+  — **114 de 218 significativas a FDR<0,25** (89 a FDR<0,05). **27 vias compartilhadas**
+  (FDR<0,25 dos dois lados) — bem mais que as 15 encontradas (por engano) contra o GSE53868.
+- **Concordância de direção (sinal do ES) nas 27 compartilhadas: 26 de 27 (96%) na mesma
+  direção** — achado muito mais forte e consistente que o do GSE53868. Só uma via (04020,
+  sinalização de cálcio) vai em direção oposta.
+- **Vias concordantes mecanisticamente relevantes para tecido conjuntivo/matriz extracelular**
+  (o eixo temático já estabelecido no projeto): **04510** (adesão focal), **04512** (interação
+  ECM-receptor), **04520** (junção aderente), **04270** (contração de músculo liso vascular),
+  **04810** (regulação do citoesqueleto de actina), **04310** (via Wnt), **04380**
+  (diferenciação de osteoclastos). Também concordantes: várias vias imunes (**04062** quimiocinas,
+  **04621** NOD-like receptor, **04650** citotoxicidade de células NK, **04660** receptor de
+  células T, **04662** receptor de células B, **04666** fagocitose mediada por Fc-gamma-R) e um
+  bloco de vias de "câncer" do KEGG (**05212, 05213, 05214, 05215, 05218, 05220, 05221, 05223**
+  — ressalva já feita várias vezes neste projeto: essas categorias tendem a capturar genes
+  genéricos de sinalização PI3K/RAS/MAPK compartilhados por muitos processos, não relevância
+  literal de câncer).
 - **Nomes das vias KEGG**: meu acesso à API do KEGG está bloqueado neste ambiente (mesma
   limitação já registrada para NCBI/PubMed) — os nomes acima vêm do meu conhecimento prévio dos
-  IDs KEGG padrão, não de uma consulta ao vivo. São IDs estáveis e bem conhecidos, mas recomendo
-  conferir os nomes num site do KEGG antes de citar na tese, especialmente os de interesse
-  central.
-- **Conclusão honesta**: ao contrário do Chen 2006 (TGF-beta, direção consistente, achado
-  mecanisticamente coerente), este cruzamento mostra uma sobreposição real (15 vias, mais do
-  que o esperado por acaso) mas majoritariamente **discordante em direção** — não dá para
-  apontar um eixo biológico único e consistente entre este SUI e o POP a partir deste resultado
-  isolado; tratar como sinal fraco/misto, não como confirmação.
+  IDs KEGG padrão, não de uma consulta ao vivo. Recomendo conferir num site do KEGG antes de
+  citar na tese, especialmente os de interesse central.
+- **Conclusão honesta**: esse é um achado bem mais forte que a comparação com GSE53868 — 96%
+  de concordância de direção em 27 vias compartilhadas, com vias de adesão/ECM/citoesqueleto
+  entre as concordantes, no mesmo eixo temático (remodelamento de tecido conjuntivo) já
+  recorrente no projeto. Ainda assim, a mesma ressalva de amplitude já registrada antes para o
+  GSEA real do GSE208261 se aplica aqui: ~52% de todas as vias testadas no POP são significativas
+  (114/218) — uma fração ampla o bastante para que parte da sobreposição reflita mudança
+  transcricional sistêmica geral, não 27 mecanismos independentes. Ainda assim, o padrão
+  temático (adesão/ECM/citoesqueleto) é coerente e vale destacar na tese.
 - `results/SUI_43032_2020_144_combined_deduplicated.csv` — tabela combinada e deduplicada.
   `results/GSEA_preranked_SUI_43032_2020_144_KEGG.csv` — GSEA completo (221 vias).
-  `results/GSEA_shared_KEGG_SUI43032_2020_144_vs_POP.csv` — as 15 vias compartilhadas, com
-  ES/NES/p-valor dos dois lados e concordância de direção.
+  `results/GSEA_shared_KEGG_SUI43032_2020_144_vs_POP_GSE208261.csv` — as 27 vias compartilhadas,
+  com ES/NES/p-valor dos dois lados e concordância de direção.
 - `data/43032_2020_144_SUI_vs_Ctrl_microarray_MOESM2.xls` — tabela original salva para
   rastreabilidade.
